@@ -1,0 +1,88 @@
+{
+  "time": "14:33:55",
+  "date": "2026年04月15日",
+  "week": "星期三",
+  "helpText": "告警规则说明",
+  "title": "湖州电力气象服务平台",
+  "mapTitle": "2026年04月15日15时 整点气温分布图",
+  "mapSubtitle": "气温 / ℃",
+  "queryPlaceholder": "经纬度查询",
+  "weatherFactors": [
+    { "name": "气温", "options": ["整点", "日最高", "日最低"], "activeIndex": 0 },
+    { "name": "降水", "options": ["1h", "3h", "6h", "12h", "24h"], "activeIndex": 0 },
+    { "name": "风", "options": ["极大风", "平均风", "12h极大风"], "activeIndex": 1 },
+    { "name": "能见度", "options": ["整点", "日最小"], "activeIndex": 0 },
+    { "name": "相对湿度", "options": ["整点", "平均", "日最小"], "activeIndex": 0 },
+    { "name": "云量", "options": ["逐小时"], "activeIndex": 0 },
+    { "name": "辐射", "options": ["逐15分钟"], "activeIndex": 0 },
+    { "name": "强对流", "options": ["综合", "暴雨", "雷电", "大风"], "activeIndex": 0 }
+  ],
+  "forecastText": "湖州市气象局2026年4月15日10时发布天气预报：今天多云到阴有小雨，明天阴有中到大阵雨或雷雨，后天阴有阵雨或雷雨。",
+  "forecastDays": [
+    { "week": "周五", "date": "07-28", "weather": "大雨", "icon": "🌧", "high": 22, "low": 19, "wind": "东南风", "level": "三级" },
+    { "week": "周六", "date": "07-29", "weather": "中雨", "icon": "🌧", "high": 21, "low": 17, "wind": "东南风", "level": "三级" },
+    { "week": "周日", "date": "07-30", "weather": "中雨", "icon": "🌧", "high": 19, "low": 18, "wind": "东风", "level": "三级" },
+    { "week": "周一", "date": "07-31", "weather": "大雨", "icon": "⛈", "high": 17, "low": 18, "wind": "东南风", "level": "三级" },
+    { "week": "周二", "date": "08-01", "weather": "阴", "icon": "🌙", "high": 18, "low": 16, "wind": "南风", "level": "一级" },
+    { "week": "周三", "date": "08-02", "weather": "多云", "icon": "⛅", "high": 24, "low": 17, "wind": "南风", "level": "三级" },
+    { "week": "周四", "date": "08-03", "weather": "晴", "icon": "☀", "high": 23, "low": 17, "wind": "南风", "level": "四级" }
+  ],
+  "toolbar": ["雷 达", "地 闪", "台风路径", "输电线路"],
+  "activeToolbar": "输电线路",
+  "layerGroups": [
+    {
+      "title": "自动站",
+      "switchable": true,
+      "enabled": true,
+      "items": [
+        { "name": "国家站", "checked": true },
+        { "name": "区域站", "checked": true },
+        { "name": "站名", "checked": true },
+        { "name": "数值", "checked": true }
+      ]
+    },
+    {
+      "title": "填色",
+      "switchable": true,
+      "enabled": true,
+      "items": [
+        { "name": "数值", "checked": false },
+        { "name": "等值线", "checked": false }
+      ]
+    },
+    {
+      "title": "地图",
+      "switchable": false,
+      "enabled": true,
+      "items": [
+        { "name": "县界", "checked": true },
+        { "name": "县名", "checked": false },
+        { "name": "地图裁边", "checked": true },
+        { "name": "经纬度显示", "checked": false }
+      ]
+    }
+  ],
+  "warning": [
+    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
+    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "高风险" } },
+    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "中风险" } },
+    { "town": "XX街道", "realtime": { "risk": "中风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "高风险" }, "h18": { "risk": "高风险" } },
+    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
+    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "高风险" } },
+    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
+    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } }
+  ],
+  "similarDays": [
+    { "date": "03月16日", "percent": 82, "high": 17.7, "low": 13.3, "rain": 0.0 },
+    { "date": "03月12日", "percent": 76, "high": 16.6, "low": 11.4, "rain": 0.0 },
+    { "date": "03月21日", "percent": 72, "high": 21.6, "low": 12.1, "rain": 4.7 }
+  ],
+  "materialTabs": ["一周预报", "旬预报", "月预报", "台风报告单"],
+  "materialFiles": [
+    { "title": "202604151000", "updateTime": "2026年04月15日10时30分更新" },
+    { "title": "202604101000", "updateTime": "2026年04月10日11时更新" },
+    { "title": "202604061000", "updateTime": "2026年04月06日10时30分更新" },
+    { "title": "202604031000", "updateTime": "2026年04月03日11时更新" }
+  ],
+  "timeline": ["10时", "19时", "20时", "21时", "22时", "23时", "15日", "01时", "02时", "03时", "04时", "05时", "06时", "07时", "08时", "09时", "10时", "11时", "12时", "13时", "14时", "15时"]
+}

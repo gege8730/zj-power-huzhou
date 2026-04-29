@@ -1,0 +1,20 @@
+{
+  "name": "huzhou-power-weather-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "vite": "latest",
+    "vue": "latest",
+    "typescript": "latest",
+    "vue-tsc": "latest"
+  },
+  "devDependencies": {}
+}
