@@ -9,13 +9,13 @@
   "queryPlaceholder": "经纬度查询",
   "weatherFactors": [
     { "name": "气温", "options": ["整点", "日最高", "日最低"], "activeIndex": 0 },
-    { "name": "降水", "options": ["1h", "3h", "6h", "12h", "24h"], "activeIndex": 0 },
-    { "name": "风", "options": ["极大风", "平均风", "12h极大风"], "activeIndex": 1 },
-    { "name": "能见度", "options": ["整点", "日最小"], "activeIndex": 0 },
-    { "name": "相对湿度", "options": ["整点", "平均", "日最小"], "activeIndex": 0 },
-    { "name": "云量", "options": ["逐小时"], "activeIndex": 0 },
-    { "name": "辐射", "options": ["逐15分钟"], "activeIndex": 0 },
-    { "name": "强对流", "options": ["综合", "暴雨", "雷电", "大风"], "activeIndex": 0 }
+    { "name": "降水", "options": ["1h", "3h", "6h", "12h", "24h"]},
+    { "name": "风", "options": ["极大风", "平均风", "12h极大风"]},
+    { "name": "能见度", "options": ["整点", "日最小"] },
+    { "name": "相对湿度", "options": ["整点", "平均", "日最小"] },
+    { "name": "云量", "options": ["逐小时"] },
+    { "name": "辐射", "options": ["逐15分钟"] },
+    { "name": "强对流", "options": ["综合", "暴雨", "雷电", "大风"] }
   ],
   "forecastText": "湖州市气象局2026年4月15日10时发布天气预报：今天多云到阴有小雨，明天阴有中到大阵雨或雷雨，后天阴有阵雨或雷雨。",
   "forecastDays": [

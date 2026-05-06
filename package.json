@@ -11,10 +11,14 @@
   },
   "dependencies": {
     "@vitejs/plugin-vue": "latest",
+    "@zjqx/gridfield": "file:zjqx-gridfield-0.2.1.tgz",
+    "leaflet": "^1.9.4",
+    "typescript": "latest",
     "vite": "latest",
     "vue": "latest",
-    "typescript": "latest",
     "vue-tsc": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/leaflet": "^1.9.20"
+  }
 }

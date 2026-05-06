@@ -37,24 +37,23 @@ defineProps<{
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.38rem, 0.78vh, 0.55rem);
+  gap: clamp(0.38rem, 0.98vh, 0.55rem);
 }
 
 .factor-row {
-  min-height: clamp(1.75rem, 3.05vh, 2.25rem);
+  min-height: clamp(1.45rem, 2.70vh, 2.05rem);
   display: grid;
-  grid-template-columns: minmax(4.8rem, 21%) 1fr;
+  grid-template-columns: minmax(7rem, 20%) 1fr;
   align-items: center;
-  padding: 0 clamp(0.55rem, 0.65vw, 0.8rem);
+  padding: 0 clamp(0.55rem, 0.65vw, 0.8rem) 0.1rem clamp(0.55rem, 0.65vw, 0.8rem);
   background: rgba(17, 75, 143, 0.65);
 }
 
 .factor-name {
   position: relative;
   padding-left: 1.35rem;
-  color: #e8f8ff;
+  color: #c3e8f8;
   font-size: clamp(0.82rem, 0.84vw, 1rem);
-  font-weight: 600;
 }
 
 .factor-name::before {
@@ -69,7 +68,7 @@ defineProps<{
 
 .factor-options {
   display: flex;
-  justify-content: space-around;
+  justify-content: flex-start;
   gap: clamp(0.45rem, 1vw, 1.25rem);
   align-items: center;
   white-space: nowrap;
@@ -77,10 +76,9 @@ defineProps<{
 
 .factor-option {
   min-width: 2rem;
-  padding: 0.1rem 0.25rem;
-  color: #f4fdff;
-  font-size: clamp(0.8rem, 0.84vw, 1rem);
-  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  color: #ffffff;
+  font-size: clamp(0.7rem, 0.74vw, 0.9rem);
   text-align: center;
 }
 

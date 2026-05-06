@@ -16,10 +16,10 @@
   --yellow: #ffd328;
   --green: #55e288;
   --red: #ff4f5b;
-  --header-h: clamp(4rem, 6.6vh, 5rem);
+  --header-h: clamp(4.3rem, 7vh, 5rem);
   --edge-x: clamp(0.9rem, 1.45vw, 2rem);
   --edge-bottom: clamp(0.9rem, 2.2vh, 1.7rem);
-  --layout-gap: clamp(0.8rem, 1.35vw, 1.7rem);
+  --layout-gap: clamp(0.8rem, 1.4vw, 1.7rem);
   --side-w: clamp(22rem, 22.8vw, 30rem);
   --panel-gap: clamp(0.8rem, 1.8vh, 1.3rem);
 }
@@ -131,7 +131,7 @@ input {
   gap: 0.7rem;
   padding-left: 2.35rem;
   color: #fff;
-  font-size: clamp(1.25rem, 1.3vw, 1.65rem);
+  font-size: clamp(1.15rem, 1vw, 1.05rem);
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -155,7 +155,7 @@ input {
   flex: 1;
   min-height: 0;
   padding: clamp(0.65rem, 1.4vh, 0.95rem) clamp(0.8rem, 1vw, 1rem) clamp(0.7rem, 1.4vh, 1rem);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .sub-title-row {
@@ -166,7 +166,7 @@ input {
   padding: 0 0.75rem;
   margin-bottom: clamp(0.45rem, 0.9vh, 0.65rem);
   font-size: clamp(0.9rem, 0.9vw, 1.1rem);
-  color: #e4f6ff;
+  color: #c3e8f8;
   background: rgba(19, 79, 146, 0.62);
 }
 
@@ -224,4 +224,22 @@ input {
     --layout-gap: clamp(0.6rem, 1vw, 1.2rem);
     font-size: clamp(11px, 0.72vw, 16px);
   }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(145, 142, 142, 0.3);  /* 始终显示，但很淡 */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 180, 180, 0.5);
 }

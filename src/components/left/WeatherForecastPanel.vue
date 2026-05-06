@@ -82,13 +82,13 @@ const lowPoints = computed(() => lowCoords.value.map((point) => `${point.x},${po
 }
 
 .forecast-text {
-  flex: 0 0 clamp(4.8rem, 8.8vh, 6rem);
-  margin: clamp(0.55rem, 1.1vh, 0.9rem) 0.5rem clamp(0.65rem, 1.4vh, 1.1rem);
+  margin: clamp(0.55rem, 1.1vh, 0.9rem) 0.5rem clamp(0.65rem, 1.8vh, 1.1rem);
   color: #f1faff;
-  font-size: clamp(0.8rem, 0.84vw, 1rem);
+  font-size: clamp(0.8rem, 0.84vw, 0.9rem);
   line-height: 1.62;
   text-align: left;
-  overflow: hidden;
+  overflow: auto;
+  max-height: clamp( 4rem,7.3vh,20%);
 }
 
 .seven-title {
@@ -103,14 +103,13 @@ const lowPoints = computed(() => lowCoords.value.map((point) => `${point.x},${po
 
 .day-card {
   text-align: center;
-  color: #dff6ff;
-  font-size: clamp(0.65rem, 0.68vw, 0.82rem);
-  line-height: 1.35;
+  color: #98C7C4;
+  font-size: clamp(0.6rem, 0.63vw, 0.7rem);
+  line-height: 1.25;
 }
 
 .week {
-  color: #c8e4ff;
-  font-weight: 700;
+  color: #98C7C4;
 }
 
 .date {
@@ -124,10 +123,6 @@ const lowPoints = computed(() => lowCoords.value.map((point) => `${point.x},${po
   font-size: clamp(1.1rem, 1.15vw, 1.45rem);
   line-height: clamp(1.45rem, 2.6vh, 1.85rem);
   filter: drop-shadow(0 0 0.32rem rgba(75, 213, 255, 0.85));
-}
-
-.weather {
-  font-size: clamp(0.65rem, 0.68vw, 0.82rem);
 }
 
 .temp-chart {
@@ -183,20 +178,21 @@ const lowPoints = computed(() => lowCoords.value.map((point) => `${point.x},${po
   text-align: center;
   font-size: clamp(0.6rem, 0.63vw, 0.75rem);
   line-height: 1.55;
-  color: #d8efff;
+  color: #98C7C4;
 }
 
 .night-icon {
   height: clamp(1.25rem, 2.2vh, 1.55rem);
-  font-size: clamp(0.9rem, 0.95vw, 1.2rem);
+  font-size: clamp(0.6rem, 0.63vw, 0.7rem);
 }
 
 footer {
   margin-top: auto;
   padding-top: clamp(0.4rem, 1vh, 0.7rem);
   text-align: center;
-  color: #bcd8ef;
-  font-size: clamp(0.72rem, 0.78vw, 0.95rem);
+  color:#fff;
+  opacity: 0.48;
+  font-size: clamp(0.7rem, 0.73vw, 0.8rem);
   letter-spacing: 0.06em;
 }
 </style>

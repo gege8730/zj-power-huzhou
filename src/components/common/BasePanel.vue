@@ -1,7 +1,7 @@
 <template>
   <section class="panel" :class="className">
     <div v-if="title" class="panel-title">{{ title }}</div>
-    <div class="panel-body" :class="bodyClass">
+    <div class="panel-body custom-scrollbar" :class="bodyClass">
       <slot />
     </div>
   </section>
