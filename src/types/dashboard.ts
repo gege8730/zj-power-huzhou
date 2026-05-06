@@ -58,7 +58,7 @@ export interface DashboardMock {
   queryPlaceholder: string
   weatherFactors: WeatherFactorGroup[]
   forecastText: string
-  forecastDays: ForecastDay[]
+  forecastDays: any[]
   toolbar: string[]
   activeToolbar: string
   layerGroups: LayerGroup[]

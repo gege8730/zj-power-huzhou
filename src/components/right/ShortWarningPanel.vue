@@ -49,8 +49,8 @@ const riskClass = (risk: WarningRow['realtime']['risk']) => ({
 .warning-time {
   position: absolute;
   right: 0.9rem;
-  top: calc(clamp(2.05rem, 3.3vh, 2.6rem) * -0.72);
-  color: #d9f5ff;
+  top: calc(clamp(2.05rem, 3.3vh, 2.6rem) * -0.82);
+  color: #c3e8f8;
   font-size: clamp(0.72rem, 0.74vw, 0.9rem);
 }
 
@@ -72,7 +72,7 @@ const riskClass = (risk: WarningRow['realtime']['risk']) => ({
 }
 
 .warning-table td {
-  height: 1.82rem;
+  height: 1.72rem;
   border: 1px solid rgba(20, 160, 255, 0.76);
   background: rgba(11, 65, 124, 0.58);
 }
