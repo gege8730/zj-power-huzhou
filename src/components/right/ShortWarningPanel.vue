@@ -44,6 +44,13 @@ const riskClass = (risk: WarningRow['realtime']['risk']) => ({
 .short-warning {
   flex: 0 0 37.5%;
   min-height: 20rem;
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
+.short-warning :deep(.panel-body) {
+  overflow: visible !important;
 }
 
 .warning-time {

@@ -37,15 +37,15 @@ defineProps<{
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.38rem, 0.98vh, 0.55rem);
+  gap: clamp(0.28rem, 0.98vh, 0.25rem);
 }
 
 .factor-row {
-  min-height: clamp(1.45rem, 2.70vh, 2.05rem);
+  min-height: clamp(1.45rem, 3vh, 2.05rem);
   display: grid;
   grid-template-columns: minmax(7rem, 20%) 1fr;
   align-items: center;
-  padding: 0 clamp(0.55rem, 0.65vw, 0.8rem) 0.1rem clamp(0.55rem, 0.65vw, 0.8rem);
+  padding: 0.2rem clamp(0.55rem, 0.65vw, 0.8rem) 0.3rem clamp(0.55rem, 0.65vw, 0.8rem);
   background: rgba(17, 75, 143, 0.65);
 }
 

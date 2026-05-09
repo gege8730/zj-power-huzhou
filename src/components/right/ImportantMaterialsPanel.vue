@@ -12,8 +12,8 @@
       </button>
     </div>
     <div class="file-list">
-      <div v-for="file in files" :key="file.title" class="file-card neon-border">
-        <div class="file-icon">▣</div>
+      <div v-for="(file, index) in files" :key="file.title" class="file-card neon-border" :class="{ active_file: index === 0 }">
+        <div class="file-icon"><img src="../../assets/word.png" alt="icon"></div>
         <div>
           <div class="file-title">{{ file.title }}</div>
           <div class="file-time">{{ file.updateTime }}</div>
@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+import { number } from 'echarts';
 import type { MaterialFile } from '../../types/dashboard'
 import BasePanel from '../common/BasePanel.vue'
 
@@ -47,7 +48,7 @@ defineProps<{
 
 .tabs {
   display: flex;
-  gap: clamp(0.45rem, 0.7vw, 0.7rem);
+  gap: clamp(0.65rem, 1.2vw, 1.3rem);
   margin-bottom: clamp(0.5rem, 0.9vh, 0.7rem);
 }
 
@@ -57,20 +58,23 @@ defineProps<{
   height: clamp(1.8rem, 3.2vh, 2.2rem);
   padding: 0;
   border-radius: 0.3rem;
-  font-size: clamp(0.75rem, 0.78vw, 0.95rem);
-  font-weight: 700;
+  font-size: clamp(0.75rem, 0.7vw, 0.95rem);
+  background-color: #004985;
+  font-weight: 500;
 }
 
 .tabs .badge-button.active {
-  background: linear-gradient(180deg, rgba(17, 141, 233, 1), rgba(3, 87, 169, 0.96));
+  /* background: linear-gradient(180deg, rgba(17, 141, 233, 1), rgba(3, 87, 169, 0.96)); */
+  border: 1px solid rgba(33, 177, 255, 0.64);
 }
 
 .file-list {
-  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: clamp(0.45rem, 0.85vh, 0.6rem);
+  height: calc(100% - clamp(1.8rem, 3.2vh, 2.2rem) - clamp(0.5rem, 0.9vh, 0.7rem));
+  overflow-y: auto;
 }
 
 .file-card {
@@ -80,7 +84,11 @@ defineProps<{
   align-items: center;
   gap: 0.85rem;
   padding: 0 clamp(0.8rem, 1vw, 1.15rem);
-  background: linear-gradient(180deg, rgba(7, 94, 159, 0.74), rgba(8, 64, 130, 0.82));
+  background: #0E2F5C;
+}
+.neon-border {
+  border: none;
+  box-shadow: none;
 }
 
 .file-icon {
@@ -90,13 +98,19 @@ defineProps<{
 }
 
 .file-title {
-  font-size: clamp(0.8rem, 0.84vw, 1rem);
-  font-weight: 700;
+  font-size: clamp(0.8rem, 0.84vw, 0.95rem);
+  font-weight: 500;
 }
 
 .file-time {
   margin-top: 0.12rem;
   color: #3fd7ff;
-  font-size: clamp(0.66rem, 0.68vw, 0.82rem);
+  font-size: clamp(0.66rem, 0.6vw, 0.82rem);
+}
+
+.active_file{
+  background-image: url('../../assets/active_word.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
 </style>

@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.20",
-    "less": "^4.6.4"
+    "less": "^4.6.4",
+    "sass-embedded": "^1.99.0"
   }
 }
