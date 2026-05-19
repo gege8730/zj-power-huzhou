@@ -29,7 +29,7 @@ defineProps<{
 .control-groups {
   position: absolute;
   left: 0;
-  top: 34%;
+  top: 4.3%;
   width: clamp(8.5rem, 10.7vw, 10.2rem);
   display: flex;
   flex-direction: column;

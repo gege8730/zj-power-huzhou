@@ -29,7 +29,7 @@ defineProps<{
 .layer-toolbar {
   position: absolute;
   left: 0;
-  top: 4.4%;
+  top: 42%;
   width: clamp(8.5rem, 10.7vw, 10.2rem);
   display: flex;
   flex-direction: column;

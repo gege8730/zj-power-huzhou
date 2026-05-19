@@ -176,7 +176,6 @@
       "enabled": true,
       "items": [
         { "name": "国家站", "checked": true },
-        { "name": "区域站", "checked": true },
         { "name": "站名", "checked": true },
         { "name": "数值", "checked": true }
       ]
@@ -186,8 +185,7 @@
       "switchable": true,
       "enabled": true,
       "items": [
-        { "name": "数值", "checked": false },
-        { "name": "等值线", "checked": false }
+        { "name": "数值", "checked": false }
       ]
     },
     {

@@ -1,12 +1,12 @@
 <template>
   <main class="map-stage fade-in">
-    <h2 class="map-title glow-text">{{ title }}</h2>
+    <h2 class="map-title">{{ title }}</h2>
     <div class="weather-icons">
     </div>
 
-    <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
     <MapControlGroup :groups="layerGroups" />
-    <MapCore  class="map-canvas"/>
+    <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
+    <MapCore class="map-canvas" />
     <TemperatureLegend />
 
     <div class="map-bottom-tabs">
@@ -55,9 +55,9 @@ defineProps<{
   margin: 0;
   text-align: center;
   color: #fff;
-  font-size: clamp(1.45rem, 1.45vw, 1.95rem);
+  font-size: clamp(1.35rem, 1.15vw, 1.95rem);
   line-height: 1.35;
-  font-weight: 900;
+  font-weight: 750;
   letter-spacing: 0.05em;
   z-index: 5;
 }
@@ -93,10 +93,10 @@ defineProps<{
 
 .map-canvas {
   position: absolute;
-  width: calc(100vw );
-  height: calc(100% + var(--edge-bottom) + (var(--layout-gap) - 1.15vh ));
+  width: calc(100vw);
+  height: calc(100% + var(--edge-bottom) + (var(--layout-gap) - 1.15vh));
   left: calc((var(--side-w) + var(--layout-gap) + var(--edge-x))*-1);
-  top:calc((var(--layout-gap) - 1.15vh )*-1);
+  top: calc((var(--layout-gap) - 1.15vh)*-1);
   z-index: 1;
 }
 
@@ -107,29 +107,6 @@ defineProps<{
     linear-gradient(90deg, rgba(5, 18, 34, 0.3), transparent 20%, transparent 80%, rgba(5, 18, 34, 0.36)),
     linear-gradient(180deg, rgba(2, 15, 30, 0.28), transparent 36%, rgba(2, 15, 30, 0.24));
   z-index: 3;
-}
-
-.map-marker {
-  position: absolute;
-  z-index: 4;
-  min-width: 2.4rem;
-  color: #f8ffff;
-  font-size: clamp(0.68rem, 0.68vw, 0.82rem);
-  line-height: 1.16;
-  font-weight: 900;
-  text-align: center;
-  text-shadow: 0 0.06rem 0.2rem #001322, 0 0 0.25rem #001322;
-}
-
-.map-marker::before {
-  content: "";
-  display: block;
-  width: 0.45rem;
-  height: 0.45rem;
-  margin: 0 auto 0.08rem;
-  border-radius: 50%;
-  background: #38ff5f;
-  box-shadow: 0 0 0.45rem rgba(84, 255, 110, 0.9);
 }
 
 .changxing {
