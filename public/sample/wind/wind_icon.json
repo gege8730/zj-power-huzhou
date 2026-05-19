@@ -1,0 +1,138 @@
+{
+  "wind-0": {
+    "width": 12,
+    "height": 24,
+    "x": 10,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-1": {
+    "width": 12,
+    "height": 24,
+    "x": 42,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-2": {
+    "width": 12,
+    "height": 24,
+    "x": 74,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-3": {
+    "width": 12,
+    "height": 24,
+    "x": 106,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-4": {
+    "width": 12,
+    "height": 24,
+    "x": 138,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-5": {
+    "width": 12,
+    "height": 24,
+    "x": 170,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-6": {
+    "width": 12,
+    "height": 24,
+    "x": 202,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-7": {
+    "width": 12,
+    "height": 24,
+    "x": 234,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-8": {
+    "width": 12,
+    "height": 24,
+    "x": 266,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-9": {
+    "width": 12,
+    "height": 24,
+    "x": 298,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-10": {
+    "width": 12,
+    "height": 24,
+    "x": 330,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-11": {
+    "width": 12,
+    "height": 24,
+    "x": 362,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-12": {
+    "width": 12,
+    "height": 24,
+    "x": 394,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-13": {
+    "width": 12,
+    "height": 24,
+    "x": 426,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-14": {
+    "width": 12,
+    "height": 24,
+    "x": 458,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-15": {
+    "width": 12,
+    "height": 24,
+    "x": 490,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  },
+  "wind-16": {
+    "width": 12,
+    "height": 24,
+    "x": 522,
+    "y": 4,
+    "pixelRatio": 1,
+    "visible": true
+  }
+}

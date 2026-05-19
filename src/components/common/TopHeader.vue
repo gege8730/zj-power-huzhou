@@ -29,13 +29,13 @@ defineProps<{
   display: flex;
   align-items: flex-start;
   padding: 1.15vh 0;
-background: 
-  url('../../assets/title.png'),
-  linear-gradient(180deg, rgba(7, 62, 106, 0.86), rgba(7, 28, 62, 0.2));
-background-size: 100% 100%;  /* 同时作用于两个背景 */
-background-repeat: no-repeat;
+  background: 
+    url('../../assets/title.png'),
+    linear-gradient(180deg, rgba(7, 62, 106, 0.86), rgba(7, 28, 62, 0.2));
+  background-size: 100% 100%;  /* 同时作用于两个背景 */
+  background-repeat: no-repeat;
+  z-index: 2;
 }
-
 .date-block {
   width: clamp(6rem, 6.4vw, 8rem);
   margin-left: clamp(2rem, 3.8vw, 4.6rem);
@@ -109,7 +109,7 @@ h1 {
   top: 25%;
   color: #c3e8f8;
   font-size: clamp(0.75rem, 0.75vw, 0.95rem);
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 0.3rem;

@@ -29,5 +29,6 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: var(--panel-gap);
+  z-index: 2;
 }
 </style>

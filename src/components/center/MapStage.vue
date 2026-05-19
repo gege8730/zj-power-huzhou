@@ -2,22 +2,11 @@
   <main class="map-stage fade-in">
     <h2 class="map-title glow-text">{{ title }}</h2>
     <div class="weather-icons">
-      <div class="warn-icon lightning">⚡<small>雷电</small></div>
-      <div class="warn-icon rain">☁<small>暴雨</small></div>
     </div>
 
     <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
     <MapControlGroup :groups="layerGroups" />
-
-    <div class="map-canvas">
-      <img :src="mapImage" alt="湖州气温分布图" class="map-image" />
-      <div class="map-vignette"></div>
-      <div class="map-marker changxing">22.3<br />长兴</div>
-      <div class="map-marker huzhou">21.3<br />湖州</div>
-      <div class="map-marker anji">20.8<br />安吉</div>
-      <div class="map-marker deqing">21.1<br />德清</div>
-    </div>
-
+    <MapCore  class="map-canvas"/>
     <TemperatureLegend />
 
     <div class="map-bottom-tabs">
@@ -31,10 +20,10 @@
 
 <script setup lang="ts">
 import type { LayerGroup } from '../../types/dashboard'
-import mapImage from '../../assets/huzhou-map-placeholder.png'
 import LayerToolbar from './LayerToolbar.vue'
 import MapControlGroup from './MapControlGroup.vue'
 import TemperatureLegend from './TemperatureLegend.vue'
+import MapCore from './MapCore.vue'
 import TimeAxis from './TimeAxis.vue'
 
 defineProps<{
@@ -55,6 +44,7 @@ defineProps<{
   min-width: 0;
   min-height: 0;
   height: 100%;
+  z-index: 1;
 }
 
 .map-title {
@@ -103,31 +93,11 @@ defineProps<{
 
 .map-canvas {
   position: absolute;
-  inset: 5.5% 2.5% 8.4% 15.5%;
-  overflow: hidden;
-  border-radius: 0.38rem;
-}
-
-.map-canvas::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 52%, rgba(255, 212, 92, 0.08), transparent 42%),
-    radial-gradient(circle at 75% 15%, rgba(77, 179, 255, 0.12), transparent 30%);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.map-image {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  width: min(90%, 52rem);
-  height: 86%;
-  object-fit: contain;
-  transform: translate(-50%, -50%);
-  opacity: 0.98;
+  width: calc(100vw );
+  height: calc(100% + var(--edge-bottom) + (var(--layout-gap) - 1.15vh ));
+  left: calc((var(--side-w) + var(--layout-gap) + var(--edge-x))*-1);
+  top:calc((var(--layout-gap) - 1.15vh )*-1);
+  z-index: 1;
 }
 
 .map-vignette {

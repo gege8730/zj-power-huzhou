@@ -17,7 +17,7 @@
   --green: #55e288;
   --red: #ff4f5b;
   --header-h: clamp(4.3rem, 7vh, 5rem);
-  --edge-x: clamp(0.9rem, 1.45vw, 2rem);
+  --edge-x: clamp(0.9rem, 0.8vw, 2rem);
   --edge-bottom: clamp(0.9rem, 2.2vh, 1.7rem);
   --layout-gap: clamp(0.8rem, 1.4vw, 1.7rem);
   --side-w: clamp(22rem, 22.8vw, 30rem);
