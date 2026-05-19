@@ -2,12 +2,14 @@
   <div class="time-axis neon-border">
     <div class="axis-control" :style="{ backgroundImage: `url(${left_btn})` }"></div>
     <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
-    <div class="axis-line">
-      <div v-for="item in timeline" :key="item" class="axis-item" :class="{ active: item === '15时' }">
-        <span class="diamond"></span>
-        <span class="label">{{ item }}</span>
+    <el-scrollbar class="axis-line-container" :always="true">
+      <div class="axis-line">
+        <div v-for="item in timeline" :key="item" class="axis-item" :class="{ active: item === '15时' }">
+          <span class="diamond"></span>
+          <span class="label">{{ item }}</span>
+        </div>
       </div>
-    </div>
+    </el-scrollbar>
   </div>
 </template>
 
@@ -25,10 +27,11 @@ defineProps<{
   left: 0;
   right: 0;
   bottom: 0%;
-  height: clamp(2rem, 4.2vh, 3rem);
+  width: 100%;
+  height: clamp(2rem, 4.5vh, 3rem);
   display: flex;
   align-items: center;
-  padding: 0.2rem 0.5rem;
+  padding: 0 0.5rem;
   border-width: .09259259vh .05208333vw 0 .05208333vw;
   border-style: solid;
   border-image: linear-gradient(180deg, rgba(55, 159, 255, .2435) 0%, rgba(0, 0, 0, 0) 100%) 1 1 0 1;
@@ -41,15 +44,18 @@ defineProps<{
   height: clamp(1.5rem, 1.45vw, 1.8rem);
   margin-right: 0.5rem;
 }
-
+.axis-line-container{
+  width: calc(100% - clamp(1.5rem, 1.45vw, 1.8rem) - clamp(1.5rem, 1.45vw, 1.8rem) - 1rem);
+  
+}
 .axis-line {
   position: relative;
-  flex: 1;
   height: 1.65rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   padding-top: 0.05rem;
+  width: fit-content;
 }
 
 .axis-line::before {
@@ -64,7 +70,7 @@ defineProps<{
 
 .axis-item {
   position: relative;
-  width: 2rem;
+  width: 3.4rem;
   height: 1.9rem;
   text-align: center;
   font-size: clamp(0.58rem, 1.1vw, 0.82rem);
