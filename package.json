@@ -13,6 +13,7 @@
     "@vitejs/plugin-vue": "latest",
     "@zjqx/gridfield": "file:zjqx-gridfield-0.2.1.tgz",
     "axios": "^1.16.1",
+    "dayjs": "^1.11.20",
     "echarts": "^6.0.0",
     "element-plus": "^2.14.0",
     "leaflet": "^1.9.4",

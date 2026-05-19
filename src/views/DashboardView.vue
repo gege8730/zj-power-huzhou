@@ -1,7 +1,7 @@
 <template>
   <div class="screen-root">
     <div class="dashboard">
-      <div class="app-layer">
+      <div class="app-layer" v-if="mock">
         <TopHeader
           :time="mock.time"
           :date="mock.date"
@@ -10,7 +10,7 @@
           :help-text="mock.helpText"
         />
         <LeftSidebar
-          :factors="mock.weatherFactors"
+          :factors="store.factors"
           :forecast-text="mock.forecastText"
           :days="mock.forecastDays"
         />
@@ -40,7 +40,8 @@ import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
 import rawMock from '../mock/dashboard.json'
 import type { DashboardMock } from '../types/dashboard'
-import { useMapStore } from '@/store' 
 
-const mock = rawMock as DashboardMock
+import { useMapStore } from '@/store'
+const store = useMapStore()
+const mock =  rawMock as unknown as DashboardMock
 </script>

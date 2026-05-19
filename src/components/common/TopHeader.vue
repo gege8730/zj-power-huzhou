@@ -1,22 +1,34 @@
 <template>
   <header class="top-header">
     <div class="date-block">
-      <div class="time">{{ time }}</div>
+      <div class="time">{{ currentTime }}</div>
       <div class="date">{{ date }}</div>
     </div>
     <div class="week">{{ week }}</div>
     <div class="help"><img src="../../assets/@.png" alt="帮助">{{ helpText }}</div>
   </header>
 </template>
-
 <script setup lang="ts">
-defineProps<{
-  time: string
-  date: string
-  week: string
-  title: string
-  helpText: string
-}>()
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+import {ref, onMounted, onUnmounted} from 'vue'
+
+dayjs.locale('zh-cn')
+let currentTime = ref(dayjs().format('HH:mm:ss'))
+let date = dayjs().format('YYYY年MM月DD日')
+let week = dayjs().format('dddd')
+let helpText = '告警规则说明'
+let timer: number
+
+onMounted(() => {
+  timer = setInterval(() => {
+    currentTime.value = dayjs().format('HH:mm:ss')
+  }, 500)
+})
+
+onUnmounted(() => {
+  clearInterval(timer)
+})
 </script>
 <style scoped>
 .top-header {

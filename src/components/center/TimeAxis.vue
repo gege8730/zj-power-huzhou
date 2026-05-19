@@ -4,9 +4,9 @@
     <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
-        <div v-for="item in timeline" :key="item" class="axis-item" :class="{ active: item === '15时' }">
+        <div v-for="(item,index) in timelist" :key="index" class="axis-item" :class="{ active: item.time === '15时' }">
           <span class="diamond"></span>
-          <span class="label">{{ item }}</span>
+          <span class="label">{{ item.time }}</span>
         </div>
       </div>
     </el-scrollbar>
@@ -14,20 +14,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick,computed } from 'vue'
 import left_btn from '../../assets/left_arrow.png'
 import right_btn from '../../assets/right_arrow.png'
+import dayjs from 'dayjs'
 
 const props = defineProps<{
-  timeline: string[]
+  timeline: Array<{ dateTime: string; filePath: boolean }>
 }>()
+
+const timelist = computed(() => {
+  return props.timeline.map(item => {
+    const date = dayjs(item.dateTime)
+    let time,day
+    if (date.hour() === 0) {
+      time = `${date.format('M月D日')}`
+      day = `${date.format('M月D日')}`
+    } else {
+      time = `${date.hour()}时`
+      day = `${date.format('M月D日HH时')}`
+    }
+    return {time:time,day:day}
+  })
+})
 
 const scrollbarRef = ref()
 
 onMounted(() => {
   nextTick(() => {
     if (scrollbarRef.value) {
-      scrollbarRef.value.setScrollLeft(props.timeline.length * 34)
+      scrollbarRef.value.setScrollLeft(props.timeline.length * 50)
     }
   })
 })

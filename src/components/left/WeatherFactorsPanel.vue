@@ -8,7 +8,8 @@
             v-for="(option, index) in factor.options"
             :key="option"
             class="factor-option"
-            :class="{ active: index === factor.activeIndex }"
+            :class="{ active: store.currentFactorType === factor.type && store.currentOptionIndex === index }"
+            @click="clickFactorOption(factor.type,index)"
           >
             {{ option }}
           </span>
@@ -19,12 +20,19 @@
 </template>
 
 <script setup lang="ts">
-import type { WeatherFactorGroup } from '../../types/dashboard'
+import type { FactorConfig,FactorType } from '@/store'
 import BasePanel from '../common/BasePanel.vue'
+import { useMapStore } from '@/store' 
 
 defineProps<{
-  factors: WeatherFactorGroup[]
+  factors: FactorConfig[]
 }>()
+// 创建 store 实例
+const store = useMapStore()
+const clickFactorOption = (FType: FactorType, option_index: number) => {
+  console.log(FType,option_index)
+  store.setNewFactorOption(FType,option_index)
+}
 </script>
 
 <style scoped>
@@ -80,6 +88,7 @@ defineProps<{
   color: #ffffff;
   font-size: clamp(0.7rem, 0.74vw, 0.9rem);
   text-align: center;
+  cursor: pointer;
 }
 
 .factor-option.active {

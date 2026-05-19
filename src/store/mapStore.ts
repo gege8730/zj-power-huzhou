@@ -12,6 +12,8 @@ export interface FactorConfig {
   name: string
   /** 要素选项 */
   options: string[]
+  /** 对应的选项标识（用于生成数据URL） */
+  ele: string[]
   /** 数据文件路径模板，如 '/sample/{factor}_{time}.json' */
   dataUrlTemplate?: string
 }
@@ -58,33 +60,32 @@ export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
   /** 要素配置列表 */
   const factors = ref<FactorConfig[]>([
-    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
-    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
-    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
-    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
-    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-    { type: 'cloud', name: '云量', options: ['逐小时'], dataUrlTemplate: '/sample/cloud_{time}.json' },
-    { type: 'radiation', name: '辐射', options: ['逐15分钟'], dataUrlTemplate: '/sample/radiation_{time}.json' },
-    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'],ele:['10MIN_T','TH24','TL24'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
+    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'],ele:['R','R3','R6','R12','R24'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
+    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'],ele:['EXMAXWINDV','','FEXMAX24'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
+    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele:['VIS','VIS24'],dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
+    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'],ele:['','',''], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
+    { type: 'cloud', name: '云量', options: ['逐小时'],ele:[''], dataUrlTemplate: '/sample/cloud_{time}.json' },
+    { type: 'radiation', name: '辐射', options: ['逐15分钟'],ele:[''], dataUrlTemplate: '/sample/radiation_{time}.json' },
+    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'],ele:['','','',''], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
   ])
 
   /** 当前选中的主要素类型 */
   const currentFactorType = ref<FactorType>('temperature')
 
-  /** 当前选中索引（如 '1-1' 表示第1个要素的第1个选项） */
-  const currentSelection = ref('1-1')
+  /** 当前选中索引（如 '0-0' 表示第1个要素的第1个选项） */
+  const currentSelection = ref('0-0')
 
   /** 当前选中要素配置 */
   const currentFactor = computed(() => {
     const [factorIndex] = currentSelection.value.split('-').map(Number)
-    return factors.value[factorIndex - 1] || factors.value[0]
+    return factors.value[factorIndex]
   })
 
   /** 当前选中选项索引（数组下标） */
   const currentOptionIndex = computed(() => {
     const [, optionIndex] = currentSelection.value.split('-').map(Number)
-    const factor = currentFactor.value
-    return Math.min(optionIndex - 1, factor.options.length - 1)
+    return optionIndex
   })
 
   /** 当前选中的选项文本 */
@@ -138,43 +139,22 @@ export const useMapStore = defineStore('map', () => {
 
   // ==================== Actions ====================
 
-  /**
-   * 切换要素类型
-   */
-  function setFactorType(type: FactorType) {
-    if (currentFactorType.value === type) return
+  function setNewFactorOption(type: FactorType, optionIndex: number) {
+    if (currentFactorType.value != type)
     currentFactorType.value = type
-    
-    // 获取该要素在数组中的索引
-    const factorIndex = factors.value.findIndex(f => f.type === type)
-    // 更新选中索引，选项重置为1
-    currentSelection.value = `${factorIndex + 1}-1`
-    
-    // 更新主时间轴（使用缓存的数据）
-    const factorLabels = timelineCache.value[type]
-    if (factorLabels.length > 0) {
-      timeline.value.labels = factorLabels
-      timeline.value.currentIndex = 0
-      timeline.value.currentLabel = factorLabels[0]
-    }
-    
-    // 触发数据刷新
-    refreshMapData()
-  }
-
-  /**
-   * 设置当前选中要素的选项
-   * @param optionIndex 选项索引（从1开始）
-   */
-  function setFactorOption(optionIndex: number) {
     const [factorIndex] = currentSelection.value.split('-').map(Number)
-    if (optionIndex >= 1) {
-      currentSelection.value = `${factorIndex}-${optionIndex}`
-      // 切换选项后刷新数据
-      refreshMapData()
-    }
+    currentSelection.value = `${factorIndex}-${optionIndex}`
+    console.log(`切换到要素 ${type}，选项索引 ${optionIndex}`)
+    // 更新主时间轴（使用缓存的数据）
+    // const factorLabels = timelineCache.value[type]
+    // if (factorLabels.length > 0) {
+    //   timeline.value.labels = factorLabels
+    //   timeline.value.currentIndex = 0
+    //   timeline.value.currentLabel = factorLabels[0]
+    // }
+    // 切换选项后刷新数据
+    // refreshMapData()
   }
-
   /**
    * 设置当前时间索引
    */
@@ -194,7 +174,7 @@ export const useMapStore = defineStore('map', () => {
     timeline.value.labels = labels
     timeline.value.currentIndex = 0
     timeline.value.currentLabel = labels[0] || ''
-    
+
     // 缓存当前要素的时间轴数据
     if (currentFactorType.value) {
       timelineCache.value[currentFactorType.value] = [...labels]
@@ -225,17 +205,17 @@ export const useMapStore = defineStore('map', () => {
     try {
       // 根据要素类型和选项获取数据
       const dataUrl = generateDataUrl(factor.type, currentTime)
-      
+
       if (dataUrl) {
         const response = await fetch(dataUrl)
         if (!response.ok) throw new Error(`Failed to load data: ${response.status}`)
         const data = await response.json()
-        
+
         // 缓存数据
         dataCache.value[cacheKey] = data
         mapRenderData.value.gridData = data
         mapRenderData.value.lastUpdateTime = new Date().toISOString()
-        
+
         // 更新刷新状态
         refreshState.value.lastRefreshTime = new Date().toISOString()
         refreshState.value.refreshCount++
@@ -254,11 +234,11 @@ export const useMapStore = defineStore('map', () => {
   function generateDataUrl(type: FactorType, time: string): string {
     const factor = factors.value.find(f => f.type === type)
     if (!factor?.dataUrlTemplate) return ''
-    
+
     // 简化处理：将选项和时间的特殊字符转为适合URL的格式
     const optionKey = currentOption.value.replace(/[^a-zA-Z0-9]/g, '_')
     const timeKey = time.replace(/[^a-zA-Z0-9]/g, '_')
-    
+
     return factor.dataUrlTemplate
       .replace('{option}', optionKey)
       .replace('{time}', timeKey)
@@ -281,13 +261,13 @@ export const useMapStore = defineStore('map', () => {
    */
   function setAutoRefresh(intervalMs: number) {
     refreshState.value.autoRefreshInterval = intervalMs
-    
+
     // 如果已经有定时器，先清除
     if ((refreshState as any)._autoRefreshTimer) {
       clearInterval((refreshState as any)._autoRefreshTimer)
-      ;(refreshState as any)._autoRefreshTimer = null
+        ; (refreshState as any)._autoRefreshTimer = null
     }
-    
+
     // 设置新的定时器
     if (intervalMs > 0) {
       (refreshState as any)._autoRefreshTimer = setInterval(() => {
@@ -352,8 +332,6 @@ export const useMapStore = defineStore('map', () => {
     dataCache,
 
     // Actions
-    setFactorType,
-    setFactorOption,
     setTimelineIndex,
     setTimelineLabels,
     refreshMapData,
@@ -364,5 +342,6 @@ export const useMapStore = defineStore('map', () => {
     clearCache,
     clearError,
     initTimeline,
+    setNewFactorOption,
   }
 })

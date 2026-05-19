@@ -1,7 +1,6 @@
 export interface WeatherFactorGroup {
   name: string
   options: string[]
-  activeIndex: number
 }
 
 export interface ForecastDay {
@@ -66,5 +65,5 @@ export interface DashboardMock {
   similarDays: SimilarDay[]
   materialTabs: string[]
   materialFiles: MaterialFile[]
-  timeline: string[]
+  timeline: Array<{ dateTime: string; filePath: boolean }>
 }

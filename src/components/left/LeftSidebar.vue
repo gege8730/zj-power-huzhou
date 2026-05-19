@@ -6,12 +6,13 @@
 </template>
 
 <script setup lang="ts">
-import type { ForecastDay, WeatherFactorGroup } from '../../types/dashboard'
+import type { ForecastDay } from '../../types/dashboard'
+import type { FactorConfig } from '@/store'
 import WeatherFactorsPanel from './WeatherFactorsPanel.vue'
 import WeatherForecastPanel from './WeatherForecastPanel.vue'
 
 defineProps<{
-  factors: WeatherFactorGroup[]
+  factors: FactorConfig[]
   forecastText: string
   days: ForecastDay[]
 }>()

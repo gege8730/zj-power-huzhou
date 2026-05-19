@@ -26,13 +26,13 @@ import TemperatureLegend from './TemperatureLegend.vue'
 import MapCore from './MapCore.vue'
 import TimeAxis from './TimeAxis.vue'
 
-defineProps<{
+const props = defineProps<{
   title: string
   queryPlaceholder: string
   toolbar: string[]
   activeToolbar: string
   layerGroups: LayerGroup[]
-  timeline: string[]
+  timeline:  Array<{ dateTime: string; filePath: boolean }>
 }>()
 </script>
 
