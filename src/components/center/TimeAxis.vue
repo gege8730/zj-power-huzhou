@@ -2,7 +2,7 @@
   <div class="time-axis neon-border">
     <div class="axis-control" :style="{ backgroundImage: `url(${left_btn})` }"></div>
     <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
-    <el-scrollbar class="axis-line-container" :always="true">
+    <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
         <div v-for="item in timeline" :key="item" class="axis-item" :class="{ active: item === '15时' }">
           <span class="diamond"></span>
@@ -14,11 +14,23 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, nextTick } from 'vue'
 import left_btn from '../../assets/left_arrow.png'
 import right_btn from '../../assets/right_arrow.png'
-defineProps<{
+
+const props = defineProps<{
   timeline: string[]
 }>()
+
+const scrollbarRef = ref()
+
+onMounted(() => {
+  nextTick(() => {
+    if (scrollbarRef.value) {
+      scrollbarRef.value.setScrollLeft(props.timeline.length * 34)
+    }
+  })
+})
 </script>
 
 <style scoped>
