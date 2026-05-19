@@ -7,8 +7,8 @@
           <i />
         </span>
       </header>
-      <div class="check-grid">
-        <label v-for="item in group.items" :key="`${group.title}-${item.name}`" class="check-item">
+      <div class="check-grid" :class="{ 'special-layout': group.title === groups[2]?.title }">
+        <label v-for="(item, index) in group.items" :key="`${group.title}-${item.name}`" class="check-item" :class="{ 'full-width': group.title === groups[2]?.title && index >= 2 }">
           <span class="checkbox" :class="{ checked: item.checked }"></span>
           {{ item.name }}
         </label>
@@ -39,8 +39,16 @@ defineProps<{
 
 .control-panel {
   padding: clamp(0.45rem, 0.85vh, 0.55rem) 0.65rem clamp(0.5rem, 0.9vh, 0.65rem);
-  border-radius: 0.2rem;
-  background: linear-gradient(180deg, rgba(8, 73, 144, 0.92), rgba(5, 48, 104, 0.94));
+  background: rgba(0, 57, 103, .9);
+  border-top-left-radius: .37037037vh;
+  border-top-right-radius: .37037037vh;
+  border-bottom-left-radius: .20833333vw;
+  border-bottom-right-radius: .20833333vw;
+  box-sizing: border-box;
+  border-width: 1px 1px 1px 0px;
+  border-style: solid;
+  border-color: #336ec799;
+  box-shadow: inset 1px 0 #67a3ff;
 }
 
 header {
@@ -94,6 +102,17 @@ header {
   color: #d8f2ff;
   font-size: clamp(0.68rem, 0.68vw, 0.82rem);
   white-space: nowrap;
+}
+
+.special-layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  row-gap: 0.42rem;
+  column-gap: 0.3rem;
+}
+
+.special-layout .full-width {
+  grid-column: 1 / -1;
 }
 
 .checkbox {

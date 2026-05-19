@@ -6,7 +6,6 @@
 
 <script setup lang="ts">
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { onMounted, onUnmounted, ref } from 'vue';
 import {
     ZJQXMap,
@@ -61,6 +60,8 @@ onMounted(async () => {
             zoom: 9.3,
             zoomSnap: 0.1,
             zoomDelta: 0.1,
+            maxZoom: 13,
+            minZoom: 8.5,
             wheelPxPerZoomLevel: 300,
             zoomControl: false, //禁用 + - 按钮
             doubleClickZoom: false, // 禁用双击放大
@@ -134,8 +135,9 @@ onUnmounted(() => {
 /* .leaflet-tile-pane {
     filter: grayscale(150%) contrast(10%) brightness(170%) sepia(.1) invert(.85) saturate(200%) !important;
 } */
-.leaflet-tile-pane  {
-    filter: grayscale(150%) sepia(8%) invert(90%) saturate(100%) !important;
+.leaflet-tile-pane {
+    /* filter: grayscale(150%) sepia(8%) invert(90%) saturate(100%) !important; */
+    filter: brightness(0.2) contrast(1.28) saturate(0.42) hue-rotate(200deg) grayscale(0.42) !important;
 }
 </style>
 
