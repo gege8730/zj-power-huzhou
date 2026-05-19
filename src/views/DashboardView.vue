@@ -40,6 +40,7 @@ import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
 import rawMock from '../mock/dashboard.json'
 import type { DashboardMock } from '../types/dashboard'
+import { useMapStore } from '@/store' 
 
 const mock = rawMock as DashboardMock
 </script>
