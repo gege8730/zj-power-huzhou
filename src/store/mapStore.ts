@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
-import {getDataFile} from '@/api/weather'
+import {getDataFile,getTimeList} from '@/api/weather'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
@@ -75,10 +75,10 @@ export const useMapStore = defineStore('map', () => {
   ])
 
   /** 当前选中的主要素类型 */
-  const currentFactorType = ref<FactorType>('precipitation')
+  const currentFactorType = ref<FactorType>('temperature')
 
   /** 当前选中索引（如 '0-0' 表示第1个要素的第1个选项） */
-  const currentSelection = ref('1-0')
+  const currentSelection = ref('0-0')
 
   /** 当前选中要素配置 */
   const currentFactor = computed(() => {
@@ -157,14 +157,14 @@ export const useMapStore = defineStore('map', () => {
 
   // ==================== Actions ====================
 
-  function setNewFactorOption(type: FactorType, optionIndex: number) {
-    if (currentFactorType.value != type)
+  async function setNewFactorOption(type: FactorType, optionIndex: number) {
+    let [factorIndex] = currentSelection.value.split('-').map(Number)
+    if (currentFactorType.value != type){
       currentFactorType.value = type
-    const [factorIndex] = currentSelection.value.split('-').map(Number)
+      factorIndex = factors.value.findIndex(f => f.type === type)
+    }
     currentSelection.value = `${factorIndex}-${optionIndex}`
-    console.log(`切换到要素 ${type}，选项索引 ${optionIndex}`)
-    // 切换选项后刷新数据
-    // refreshMapData()
+    console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
   }
   /**
    * 设置当前时间索引

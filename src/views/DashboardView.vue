@@ -2,26 +2,12 @@
   <div class="screen-root">
     <div class="dashboard">
       <div class="app-layer" v-if="initData">
-        <TopHeader/>
-        <LeftSidebar
-          :factors="store.factors"
-          :forecast-text="initData.forecastText"
-          :days="initData.forecastDays"
-        />
-        <MapStage
-          :title="initData.mapTitle"
-          :query-placeholder="initData.queryPlaceholder"
-          :toolbar="initData.toolbar"
-          :active-toolbar="initData.activeToolbar"
-          :layer-groups="initData.layerGroups"
-          :timeline="initData.timeline"
-        />
-        <RightSidebar
-          :warning="initData.warning"
-          :similar-days="initData.similarDays"
-          :material-tabs="initData.materialTabs"
-          :material-files="initData.materialFiles"
-        />
+        <TopHeader />
+        <LeftSidebar :factors="store.factors" :forecast-text="initData.forecastText" :days="initData.forecastDays" />
+        <MapStage :title="initData.mapTitle" :query-placeholder="initData.queryPlaceholder" :toolbar="initData.toolbar"
+          :active-toolbar="initData.activeToolbar" :layer-groups="initData.layerGroups" :timeline="initData.timeline" />
+        <RightSidebar :warning="initData.warning" :similar-days="initData.similarDays"
+          :material-tabs="initData.materialTabs" :material-files="initData.materialFiles" />
       </div>
     </div>
   </div>
@@ -33,13 +19,13 @@ import LeftSidebar from '../components/left/LeftSidebar.vue'
 import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
 import rawMock from '../mock/dashboard.json'
-import { onMounted,ref } from 'vue'
-import {getTimeList} from '@/api/weather'
+import { onMounted, ref, watch } from 'vue'
+import { getTimeList } from '@/api/weather'
 import type { DashboardMock } from '../types/dashboard'
 import { useMapStore } from '@/store'
 
 const store = useMapStore()
-const initData =  ref(rawMock as unknown as DashboardMock)
+const initData = ref(rawMock as unknown as DashboardMock)
 const fetchData = async () => {
   await getTimeList(store.timelineParams).then((response) => {
     initData.value.timeline = response.DS
@@ -47,7 +33,11 @@ const fetchData = async () => {
   })
 }
 
-onMounted( async() => {
+onMounted(async () => {
   await fetchData()
 })
+watch(() => store.currentSelection, async (newLabel) => {
+  console.log('当前选择的标签:', newLabel, store.timelineParams);
+  await fetchData()
+}, { immediate: true });
 </script>

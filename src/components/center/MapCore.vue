@@ -78,7 +78,7 @@ onMounted(async () => {
         });
 
         // 先加载 geojson
-        const adminBoundary = await fetch('/sample/admin_region.geojson')
+        const adminBoundary = await fetch('/sample/huz_county.geojson')
             .then((res) => {
                 if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
                 return res.json() as Promise<ClipGeometryInput>;
@@ -116,6 +116,7 @@ onMounted(async () => {
                     labels: {
                         ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
                         enabled: true,
+                        color: '#000',
                         fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
                         fontWeight: 500,
                     },

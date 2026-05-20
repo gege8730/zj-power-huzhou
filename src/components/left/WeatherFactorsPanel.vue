@@ -30,7 +30,6 @@ defineProps<{
 // 创建 store 实例
 const store = useMapStore()
 const clickFactorOption = (FType: FactorType, option_index: number) => {
-  console.log(FType,option_index)
   store.setNewFactorOption(FType,option_index)
 }
 </script>
