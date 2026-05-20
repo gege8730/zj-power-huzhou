@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import 'leaflet/dist/leaflet.css';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import {
     ZJQXMap,
     ZJQXGridFieldLayer,
@@ -18,7 +18,10 @@ import {
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
 import type { ColorScaleJson, WeatherGridJson, ClipGeometryInput } from '@zjqx/gridfield';
+import { useMapStore } from '@/store'
+import { getDataFile } from '@/api/weather'
 
+const store = useMapStore()
 const colorConfig: ColorScaleJson = {
     fieldName: 'temp',
     stops: [
@@ -74,49 +77,70 @@ onMounted(async () => {
             },
         });
 
-        // 并行加载数据，带错误处理
-        const [gridSource, adminBoundary] = await Promise.all([
-            fetch('/sample/demo_micap4.json')
-                .then((res) => {
-                    if (!res.ok) throw new Error(`Failed to load grid data: ${res.status}`);
-                    return res.json() as Promise<WeatherGridJson>;
-                }),
-            fetch('/sample/admin_region.geojson')
-                .then((res) => {
-                    if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
-                    return res.json() as Promise<ClipGeometryInput>;
-                }),
-        ]);
+        // 先加载 geojson
+        const adminBoundary = await fetch('/sample/admin_region.geojson')
+            .then((res) => {
+                if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
+                return res.json() as Promise<ClipGeometryInput>;
+            });
 
-        const grid = normalizeWeatherGrid(gridSource, { rowOrder: 'north-to-south' });
         const colorize = createColorScale(colorConfig, { mode: 'step', stopKey: 'stops' });
         const palette = createPaletteTextureData(colorConfig, { mode: 'step', stopKey: 'stops' });
 
-        const layer = new ZJQXGridFieldLayer({
-            data: grid,
-            palette,
-            colorize,
-            clip: { geometry: adminBoundary },
-            fill: {
-                ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
-                fillType: 2,
-                opacity: 1,
-            },
-            border: {
-                ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
-                enabled: true,
-                color: '#fff',
-                width: 2,
-            },
-            labels: {
-                ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
-                enabled: true,
-                fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
-                fontWeight: 500,
-            },
-            popup: false,
-        });
-        zjqxMap.addZJQXLayer(layer);
+        let layer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
+
+        const updateGridLayer = (gridData: any) => {
+            if (!gridData || !zjqxMap) return;
+
+            const grid = normalizeWeatherGrid(gridData, { rowOrder: 'north-to-south' });
+
+            if (layer) {
+                layer.setData(grid);
+            } else {
+                layer = new ZJQXGridFieldLayer({
+                    data: grid,
+                    palette,
+                    colorize,
+                    clip: { geometry: adminBoundary },
+                    fill: {
+                        ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
+                        fillType: 2,
+                        opacity: 1,
+                    },
+                    border: {
+                        ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
+                        enabled: true,
+                        color: '#fff',
+                        width: 2,
+                    },
+                    labels: {
+                        ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
+                        enabled: true,
+                        fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+                        fontWeight: 500,
+                    },
+                    popup: false,
+                });
+                zjqxMap!.addZJQXLayer(layer);
+            }
+        };
+
+        // 初始化时检查数据
+        if (store.mapRenderData.gridData) {
+            updateGridLayer(store.mapRenderData.gridData);
+        }
+
+        // 监听 timeline 变化
+        watch(() => store.mapRenderData.gridData, (newLabel) => {
+            console.log(newLabel,'dsds')
+            if (!layer) {
+                updateGridLayer(newLabel);
+            }else{
+                layer.update({
+                    data:newLabel
+                })
+            }
+        }, { immediate: true });
     } catch (error) {
         console.error('Failed to initialize map:', error);
     }

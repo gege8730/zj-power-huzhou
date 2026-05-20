@@ -4,7 +4,7 @@
     <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
-        <div v-for="(item,index) in timelinelist" :key="index" class="axis-item" :class="{ active: index == store.timeline.currentIndex }">
+        <div v-for="(item,index) in timelinelist" :key="index" class="axis-item" :class="{ active: index == store.timeline.currentIndex }" @click="store.setTimelineIndex(index)">
           <span class="diamond"></span>
           <span class="label">{{ item.time }}</span>
         </div>

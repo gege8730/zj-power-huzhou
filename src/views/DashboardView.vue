@@ -34,7 +34,7 @@ import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
 import rawMock from '../mock/dashboard.json'
 import { onMounted,ref } from 'vue'
-import {getTimeList,getDataFile} from '@/api/weather'
+import {getTimeList} from '@/api/weather'
 import type { DashboardMock } from '../types/dashboard'
 import { useMapStore } from '@/store'
 

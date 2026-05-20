@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
+import {getDataFile} from '@/api/weather'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
@@ -192,10 +193,10 @@ export const useMapStore = defineStore('map', () => {
    */
   async function refreshMapData() {
     const factor = currentFactor.value
-    const currentTime = timeline.value.currentLabel
+    const currentTimeFile = timeline.value.currentLabel.filePath
 
     // 构建缓存key
-    const cacheKey = `${factor.type}_${currentOption.value}_${currentTime}`
+    const cacheKey = `${factor.type}_${currentOption.value}_${currentTimeFile}`
 
     // 检查缓存
     if (dataCache.value[cacheKey]) {
@@ -210,22 +211,17 @@ export const useMapStore = defineStore('map', () => {
 
     try {
       // 根据要素类型和选项获取数据
-      const dataUrl = generateDataUrl(factor.type, currentTime)
+      const dataUrl = await generateData(currentTimeFile)
+      console.log(dataUrl,'map')
+      const data = dataUrl
+      // 缓存数据
+      dataCache.value[cacheKey] = data
+      mapRenderData.value.gridData = data
+      mapRenderData.value.lastUpdateTime = new Date().toISOString()
 
-      if (dataUrl) {
-        const response = await fetch(dataUrl)
-        if (!response.ok) throw new Error(`Failed to load data: ${response.status}`)
-        const data = await response.json()
-
-        // 缓存数据
-        dataCache.value[cacheKey] = data
-        mapRenderData.value.gridData = data
-        mapRenderData.value.lastUpdateTime = new Date().toISOString()
-
-        // 更新刷新状态
-        refreshState.value.lastRefreshTime = new Date().toISOString()
-        refreshState.value.refreshCount++
-      }
+      // 更新刷新状态
+      refreshState.value.lastRefreshTime = new Date().toISOString()
+      refreshState.value.refreshCount++
     } catch (error: any) {
       mapRenderData.value.error = error.message || '加载数据失败'
       console.error('Failed to refresh map data:', error)
@@ -235,19 +231,15 @@ export const useMapStore = defineStore('map', () => {
   }
 
   /**
-   * 生成数据URL
+   * 获取网格数据
    */
-  function generateDataUrl(type: FactorType, time: string): string {
-    const factor = factors.value.find(f => f.type === type)
-    if (!factor?.dataUrlTemplate) return ''
-
-    // 简化处理：将选项和时间的特殊字符转为适合URL的格式
-    const optionKey = currentOption.value.replace(/[^a-zA-Z0-9]/g, '_')
-    const timeKey = time.replace(/[^a-zA-Z0-9]/g, '_')
-
-    return factor.dataUrlTemplate
-      .replace('{option}', optionKey)
-      .replace('{time}', timeKey)
+  async function generateData (filePath: string) {
+    const params = {
+      filePath: filePath,
+      region: '330500'
+    }
+    const res = await getDataFile(params)
+    return res.DS
   }
 
   /**
@@ -315,8 +307,9 @@ export const useMapStore = defineStore('map', () => {
   /**
    * 初始化时间轴数据
    */
-  function initTimeline(initialLabels: Array<{ dateTime: string; filePath: string }>) {
+  async function initTimeline(initialLabels: Array<{ dateTime: string; filePath: string }>) {
     setTimelineLabels(initialLabels)
+    await refreshMapData()
   }
 
   return {
