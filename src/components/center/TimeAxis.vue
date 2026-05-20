@@ -26,12 +26,13 @@ const props = defineProps<{
 }>()
 
 const timelinelist = computed(() => props.timeline.map(item => {
+  const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
   const date = dayjs(item.dateTime)
   let time,day
-  if (date.hour() === 0) {
-    time = `${date.format('M月D日')}`
+  if (duration == 'D') {
+    time = `${date.format('D日')}`
     day = `${date.format('M月D日')}`
-  } else {
+  } else if (duration == 'H')  {
     time = `${date.hour()}时`
     day = `${date.format('M月D日HH时')}`
   }

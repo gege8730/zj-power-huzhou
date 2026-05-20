@@ -105,14 +105,14 @@ export const useMapStore = defineStore('map', () => {
     const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
     const startTime = () => {
       if (duration == 'H') return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
-      else if (duration == 'D') return dayjs().subtract(30, 'day').format('YYYYMMDD000000')
+      else if (duration == 'D') return dayjs().subtract(30, 'day').format('YYYYMMDDHH0000')
       else if (duration == '15MIN') return dayjs().subtract(6, 'hour').format('YYYYMMDDHHmm00')
       else if (duration == '10MIN') return dayjs().subtract(2, 'hour').format('YYYYMMDDHHmm00')
       else return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
     }
     const endTime = () => {
       if (duration == 'H') return dayjs().format('YYYYMMDDHH0000')
-      else if (duration == 'D') return dayjs().format('YYYYMMDD000000')
+      else if (duration == 'D') return dayjs().format('YYYYMMDDHH0000')
       else if (duration == '15MIN') return dayjs().format('YYYYMMDDHHmm00')
       else if (duration == '10MIN') return dayjs().format('YYYYMMDDHHmm00')
       else return dayjs().format('YYYYMMDDHH00')
