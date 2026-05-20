@@ -32,7 +32,7 @@ const props = defineProps<{
   toolbar: string[]
   activeToolbar: string
   layerGroups: LayerGroup[]
-  timeline:  Array<{ dateTime: string; filePath: boolean }>
+  timeline:  Array<{ dateTime: string; filePath: string }>
 }>()
 </script>
 

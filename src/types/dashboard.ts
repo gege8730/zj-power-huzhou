@@ -65,5 +65,5 @@ export interface DashboardMock {
   similarDays: SimilarDay[]
   materialTabs: string[]
   materialFiles: MaterialFile[]
-  timeline: Array<{ dateTime: string; filePath: boolean }>
+  timeline: Array<{ dateTime: string; filePath: string }>
 }

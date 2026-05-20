@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import dayjs from 'dayjs'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
@@ -14,6 +15,8 @@ export interface FactorConfig {
   options: string[]
   /** 对应的选项标识（用于生成数据URL） */
   ele: string[]
+  /** 要素选项对应的时间颗粒度 */
+  eleDuration: string[]
   /** 数据文件路径模板，如 '/sample/{factor}_{time}.json' */
   dataUrlTemplate?: string
 }
@@ -21,11 +24,11 @@ export interface FactorConfig {
 /** 时间轴数据 */
 export interface TimelineData {
   /** 时间标签列表 */
-  labels: string[]
+  labels: Array<{ dateTime: string; filePath: string }>
   /** 当前选中的时间索引 */
   currentIndex: number
   /** 当前选中的时间 */
-  currentLabel: string
+  currentLabel: { dateTime: string; filePath: string }
 }
 
 /** 地图渲染数据 */
@@ -60,21 +63,21 @@ export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
   /** 要素配置列表 */
   const factors = ref<FactorConfig[]>([
-    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'],ele:['10MIN_T','TH24','TL24'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
-    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'],ele:['R','R3','R6','R12','R24'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
-    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'],ele:['EXMAXWINDV','','FEXMAX24'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
-    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele:['VIS','VIS24'],dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
-    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'],ele:['','',''], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-    { type: 'cloud', name: '云量', options: ['逐小时'],ele:[''], dataUrlTemplate: '/sample/cloud_{time}.json' },
-    { type: 'radiation', name: '辐射', options: ['逐15分钟'],ele:[''], dataUrlTemplate: '/sample/radiation_{time}.json' },
-    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'],ele:['','','',''], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['10MIN_T', 'TH24', 'TL24'], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
+    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['R', 'R3', 'R6', 'R12', 'R24'], eleDuration: ['H', 'H', 'H', 'H', 'H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
+    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], ele: ['EXMAXWINDV', '', 'FEXMAX24'], eleDuration: ['H', 'H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
+    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
+    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], ele: ['', '', ''], eleDuration: ['H', 'H', 'D'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
+    { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
+    { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
+    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
   ])
 
   /** 当前选中的主要素类型 */
-  const currentFactorType = ref<FactorType>('temperature')
+  const currentFactorType = ref<FactorType>('precipitation')
 
   /** 当前选中索引（如 '0-0' 表示第1个要素的第1个选项） */
-  const currentSelection = ref('0-0')
+  const currentSelection = ref('1-0')
 
   /** 当前选中要素配置 */
   const currentFactor = computed(() => {
@@ -95,25 +98,39 @@ export const useMapStore = defineStore('map', () => {
   })
 
   // ==================== 时间轴状态 ====================
+  /** 时间轴请求参数 */
+  const timelineParams = computed(() => {
+    const ele = currentFactor.value.ele[currentOptionIndex.value]
+    const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
+    const startTime = () => {
+      if (duration == 'H') return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
+      else if (duration == 'D') return dayjs().subtract(30, 'day').format('YYYYMMDD000000')
+      else if (duration == '15MIN') return dayjs().subtract(6, 'hour').format('YYYYMMDDHHmm00')
+      else if (duration == '10MIN') return dayjs().subtract(2, 'hour').format('YYYYMMDDHHmm00')
+      else return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
+    }
+    const endTime = () => {
+      if (duration == 'H') return dayjs().format('YYYYMMDDHH0000')
+      else if (duration == 'D') return dayjs().format('YYYYMMDD000000')
+      else if (duration == '15MIN') return dayjs().format('YYYYMMDDHHmm00')
+      else if (duration == '10MIN') return dayjs().format('YYYYMMDDHHmm00')
+      else return dayjs().format('YYYYMMDDHH00')
+    }
+    const params_startTime = startTime()
+    const params_endTime = endTime()
+    return {
+      "ncType": "METEREAL",
+      "ele": ele,
+      "startTime":params_startTime,
+      "endTime": params_endTime
+    }
+  })
   /** 时间轴数据 */
   const timeline = ref<TimelineData>({
     labels: [],
     currentIndex: 0,
-    currentLabel: '',
+    currentLabel: { dateTime: '', filePath: '' },
   })
-
-  /** 原始时间轴数据（按要素类型缓存） */
-  const timelineCache = ref<Record<FactorType, string[]>>({
-    temperature: [],
-    precipitation: [],
-    wind: [],
-    visibility: [],
-    humidity: [],
-    cloud: [],
-    radiation: [],
-    convection: [],
-  })
-
   // ==================== 地图数据状态 ====================
   /** 地图渲染数据 */
   const mapRenderData = ref<MapRenderData>({
@@ -141,17 +158,10 @@ export const useMapStore = defineStore('map', () => {
 
   function setNewFactorOption(type: FactorType, optionIndex: number) {
     if (currentFactorType.value != type)
-    currentFactorType.value = type
+      currentFactorType.value = type
     const [factorIndex] = currentSelection.value.split('-').map(Number)
     currentSelection.value = `${factorIndex}-${optionIndex}`
     console.log(`切换到要素 ${type}，选项索引 ${optionIndex}`)
-    // 更新主时间轴（使用缓存的数据）
-    // const factorLabels = timelineCache.value[type]
-    // if (factorLabels.length > 0) {
-    //   timeline.value.labels = factorLabels
-    //   timeline.value.currentIndex = 0
-    //   timeline.value.currentLabel = factorLabels[0]
-    // }
     // 切换选项后刷新数据
     // refreshMapData()
   }
@@ -170,15 +180,11 @@ export const useMapStore = defineStore('map', () => {
   /**
    * 设置时间轴标签（初始化或更新）
    */
-  function setTimelineLabels(labels: string[]) {
+  function setTimelineLabels(labels: Array<{ dateTime: string; filePath: string }>) {
     timeline.value.labels = labels
-    timeline.value.currentIndex = 0
-    timeline.value.currentLabel = labels[0] || ''
-
-    // 缓存当前要素的时间轴数据
-    if (currentFactorType.value) {
-      timelineCache.value[currentFactorType.value] = [...labels]
-    }
+    const lastIndex = labels.length - 1
+    timeline.value.currentIndex = lastIndex >= 0 ? lastIndex : 0
+    timeline.value.currentLabel = labels[lastIndex] || labels[0] || ''
   }
 
   /**
@@ -309,12 +315,8 @@ export const useMapStore = defineStore('map', () => {
   /**
    * 初始化时间轴数据
    */
-  function initTimeline(initialLabels: string[]) {
+  function initTimeline(initialLabels: Array<{ dateTime: string; filePath: string }>) {
     setTimelineLabels(initialLabels)
-    // 缓存初始时间轴
-    if (currentFactorType.value) {
-      timelineCache.value[currentFactorType.value] = [...initialLabels]
-    }
   }
 
   return {
@@ -325,8 +327,8 @@ export const useMapStore = defineStore('map', () => {
     currentFactor,
     currentOptionIndex,
     currentOption,
+    timelineParams,
     timeline,
-    timelineCache,
     mapRenderData,
     refreshState,
     dataCache,

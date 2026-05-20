@@ -4,7 +4,7 @@
     <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
-        <div v-for="(item,index) in timelist" :key="index" class="axis-item" :class="{ active: item.time === '15时' }">
+        <div v-for="(item,index) in timelinelist" :key="index" class="axis-item" :class="{ active: index == store.timeline.currentIndex }">
           <span class="diamond"></span>
           <span class="label">{{ item.time }}</span>
         </div>
@@ -14,39 +14,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick,computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import left_btn from '../../assets/left_arrow.png'
 import right_btn from '../../assets/right_arrow.png'
 import dayjs from 'dayjs'
+import { useMapStore } from '@/store'
 
+const store = useMapStore()
 const props = defineProps<{
-  timeline: Array<{ dateTime: string; filePath: boolean }>
+  timeline: Array<{ dateTime: string; filePath: string }>
 }>()
 
-const timelist = computed(() => {
-  return props.timeline.map(item => {
-    const date = dayjs(item.dateTime)
-    let time,day
-    if (date.hour() === 0) {
-      time = `${date.format('M月D日')}`
-      day = `${date.format('M月D日')}`
-    } else {
-      time = `${date.hour()}时`
-      day = `${date.format('M月D日HH时')}`
-    }
-    return {time:time,day:day}
-  })
-})
-
+const timelinelist = computed(() => props.timeline.map(item => {
+  const date = dayjs(item.dateTime)
+  let time,day
+  if (date.hour() === 0) {
+    time = `${date.format('M月D日')}`
+    day = `${date.format('M月D日')}`
+  } else {
+    time = `${date.hour()}时`
+    day = `${date.format('M月D日HH时')}`
+  }
+  return {time, day}
+}))
 const scrollbarRef = ref()
 
-onMounted(() => {
+const scrollToEnd = () => {
   nextTick(() => {
     if (scrollbarRef.value) {
-      scrollbarRef.value.setScrollLeft(props.timeline.length * 50)
+      scrollbarRef.value.setScrollLeft(timelinelist.value.length * 50)
     }
   })
-})
+}
+
+onMounted(scrollToEnd)
+watch(() => props.timeline, scrollToEnd, { deep: true })
 </script>
 
 <style scoped>
