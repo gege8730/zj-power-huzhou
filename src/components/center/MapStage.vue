@@ -12,13 +12,24 @@
     <div class="map-bottom-tabs">
       <button class="mini-tab active" type="button">☀ 实况</button>
       <button class="mini-tab" type="button">☁ 预报</button>
-      <button class="mini-tab wide" type="button">▣ 2026年04月15日15时</button>
+      <el-date-picker
+        class="wide"
+        v-model="baseTimeModel"
+        type="datetime"
+        format="YYYY年MM月DD日 HH时"
+        date-format="YYYY年MM月DD日"
+        time-format="HH时"
+        placeholder="选择时间"
+        :clearable="false"
+      />
     </div>
     <TimeAxis :timeline="timeline" />
   </main>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import dayjs from 'dayjs'
 import type { LayerGroup } from '../../types/dashboard'
 import LayerToolbar from './LayerToolbar.vue'
 import MapControlGroup from './MapControlGroup.vue'
@@ -28,13 +39,22 @@ import TimeAxis from './TimeAxis.vue'
 import { useMapStore } from '@/store'
 
 const store = useMapStore()
+
+/** 桥接 Date <-> dayjs，v-model 返回的是 Date 对象 */
+const baseTimeModel = computed<Date>({
+  get: () => store.baseTime.toDate(),
+  set: (val) => {
+    if (val) store.baseTime = dayjs(val)
+  },
+})
+
 const props = defineProps<{
   title: string
   queryPlaceholder: string
   toolbar: string[]
   activeToolbar: string
   layerGroups: LayerGroup[]
-  timeline:  Array<{ dateTime: string; filePath: string }>
+  timeline: Array<{ dateTime: string; filePath: string }>
 }>()
 </script>
 
@@ -136,33 +156,56 @@ const props = defineProps<{
   left: 0;
   bottom: 7.2%;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   z-index: 7;
 }
 
 .mini-tab {
-  height: clamp(1.45rem, 2.4vh, 1.8rem);
-  min-width: 5.6rem;
+  height: clamp(1.8rem, 2.4vh, 1.8rem);
+  min-width: 6.2rem;
   padding: 0 0.75rem;
-  border: 1px solid rgba(31, 172, 255, 0.84);
+  border: 1px solid rgba(31, 173, 255, 0.664);
   border-radius: 0.25rem;
   color: #dff8ff;
   font-size: clamp(0.68rem, 0.7vw, 0.85rem);
-  font-weight: 800;
-  background: linear-gradient(180deg, rgba(9, 106, 203, 0.92), rgba(4, 66, 143, 0.9));
-  box-shadow: inset 0 0 0.65rem rgba(114, 219, 255, 0.2);
+  font-weight: 500;
+  background-image: url('../../assets/bottom-button.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
 
 .mini-tab.active {
   color: #ffe343;
+  background-image: url('../../assets/bottom-button_active.png');
 }
 
-.mini-tab.wide {
+.wide {
   min-width: 11.8rem;
+  background: rgba(0, 57, 103, .9);
+  border-top-left-radius: .37037037vh;
+  border-top-right-radius: .37037037vh;
+  border-bottom-left-radius: .20833333vw;
+  border-bottom-right-radius: .20833333vw;
+  box-sizing: border-box;
+  border-width: 1px 1px 1px 0px;
+  border-style: solid;
+  border-color: #336ec799;
+  box-shadow: inset 1px 0 #67a3ff;
 }
 
 /* loading 遮罩半透明 */
 :deep(.el-loading-mask) {
   background-color: rgba(0, 30, 60, 0.411) !important;
+}
+
+.wide :deep(.el-input__wrapper) {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 0.5rem;
+}
+
+.wide :deep(.el-input__inner) {
+  color: #dff8ff;
+  font-size: clamp(0.68rem, 0.7vw, 0.85rem);
 }
 </style>

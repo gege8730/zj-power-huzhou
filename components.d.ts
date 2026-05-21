@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BasePanel: typeof import('./src/components/common/BasePanel.vue')['default']
     EChart: typeof import('./src/components/common/EChart.vue')['default']
+    ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElPopover: typeof import('element-plus/es')['ElPopover']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ImportantMaterialsPanel: typeof import('./src/components/right/ImportantMaterialsPanel.vue')['default']

@@ -132,7 +132,13 @@ onMounted(async () => {
 
         // 监听 timeline 变化
         watch(() => store.mapRenderData.gridData, (newLabel) => {
-            console.log(newLabel,'dsds')
+            if(!newLabel){
+                if(layer){
+                    zjqxMap!.removeZJQXLayer(layer);
+                    layer = null;
+                }
+                return;
+            }
             if (!layer) {
                 updateGridLayer(newLabel);
             }else{

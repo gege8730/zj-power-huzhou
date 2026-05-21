@@ -100,22 +100,23 @@ export const useMapStore = defineStore('map', () => {
 
   // ==================== 时间轴状态 ====================
   /** 时间轴请求参数 */
+  const baseTime = ref(dayjs())
   const timelineParams = computed(() => {
     const ele = currentFactor.value.ele[currentOptionIndex.value]
     const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
     const startTime = () => {
-      if (duration == 'H') return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
-      else if (duration == 'D') return dayjs().subtract(30, 'day').format('YYYYMMDDHH0000')
-      else if (duration == '15MIN') return dayjs().subtract(6, 'hour').format('YYYYMMDDHHmm00')
-      else if (duration == '10MIN') return dayjs().subtract(2, 'hour').format('YYYYMMDDHHmm00')
-      else return dayjs().subtract(24, 'hour').format('YYYYMMDDHH0000')
+      if (duration == 'H') return baseTime.value.subtract(24, 'hour').format('YYYYMMDDHH0000')
+      else if (duration == 'D') return baseTime.value.subtract(30, 'day').format('YYYYMMDDHH0000')
+      else if (duration == '15MIN') return baseTime.value.subtract(6, 'hour').format('YYYYMMDDHHmm00')
+      else if (duration == '10MIN') return baseTime.value.subtract(2, 'hour').format('YYYYMMDDHHmm00')
+      else return baseTime.value.subtract(24, 'hour').format('YYYYMMDDHH0000')
     }
     const endTime = () => {
-      if (duration == 'H') return dayjs().format('YYYYMMDDHH0000')
-      else if (duration == 'D') return dayjs().format('YYYYMMDDHH0000')
-      else if (duration == '15MIN') return dayjs().format('YYYYMMDDHHmm00')
-      else if (duration == '10MIN') return dayjs().format('YYYYMMDDHHmm00')
-      else return dayjs().format('YYYYMMDDHH00')
+      if (duration == 'H') return baseTime.value.format('YYYYMMDDHH0000')
+      else if (duration == 'D') return baseTime.value.format('YYYYMMDDHH0000')
+      else if (duration == '15MIN') return baseTime.value.format('YYYYMMDDHHmm00')
+      else if (duration == '10MIN') return baseTime.value.format('YYYYMMDDHHmm00')
+      else return baseTime.value.format('YYYYMMDDHH00')
     }
     const params_startTime = startTime()
     const params_endTime = endTime()
@@ -144,6 +145,7 @@ export const useMapStore = defineStore('map', () => {
   })
   // 地图标题
   const maptitle = computed (() => {
+    if(timelineParams.value.ele == '') return '要素数据开发中...'
     const factor = `${currentOption.value.replace('h','小时')}${currentFactor.value.name}分布图`
     const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
     let time = dayjs(timeline.value.currentLabel.dateTime)
@@ -208,7 +210,11 @@ export const useMapStore = defineStore('map', () => {
   async function refreshMapData() {
     const factor = currentFactor.value
     const currentTimeFile = timeline.value.currentLabel.filePath
-
+    if(timelineParams.value.ele == ''){
+      mapRenderData.value.error = '当前要素数据开发中，暂无数据可展示'
+      mapRenderData.value.gridData = null
+      return
+    }
     // 构建缓存key
     const cacheKey = `${factor.type}_${currentOption.value}_${currentTimeFile}`
 
@@ -336,6 +342,7 @@ export const useMapStore = defineStore('map', () => {
     currentOption,
     timelineParams,
     timeline,
+    baseTime,
     mapRenderData,
     refreshState,
     dataCache,
