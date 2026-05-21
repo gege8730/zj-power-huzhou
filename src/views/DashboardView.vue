@@ -27,6 +27,7 @@ import dayjs from 'dayjs'
 
 const store = useMapStore()
 const initData = ref(rawMock as unknown as DashboardMock)
+// 时间轴获取
 const fetchData = async () => {
   await getTimeList(store.timelineParams).then((response) => {
     const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
@@ -52,12 +53,15 @@ const fetchData = async () => {
     store.initTimeline(timeline)
   })
 }
-
 onMounted(async () => {
   await fetchData()
 })
 watch(() => store.currentSelection, async (newLabel) => {
   console.log('当前选择的标签:', newLabel, store.timelineParams);
+  initData.value.mapTitle = store.maptitle
   await fetchData()
+}, { immediate: true });
+watch(() => store.maptitle, async (newLabel) => {
+  initData.value.mapTitle = newLabel
 }, { immediate: true });
 </script>

@@ -1,13 +1,20 @@
 <template>
   <div class="time-axis neon-border">
-    <div class="axis-control" :style="{ backgroundImage: `url(${left_btn})` }"></div>
-    <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }"></div>
+    <div class="axis-control" :style="{ backgroundImage: `url(${left_btn})` }" @click="scrollLeft"></div>
+    <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }" @click="scrollRight"></div>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
-        <div v-for="(item,index) in timelinelist" :key="index" class="axis-item" :class="{ active: index == store.timeline.currentIndex }" @click="store.setTimelineIndex(index)">
-          <span class="diamond"></span>
-          <span class="label">{{ item.time }}</span>
-        </div>
+        <el-popover placement="top" trigger="hover" popper-class="time-popover" v-for="(item,index) in timelinelist" :key="index">
+          <template #reference>
+            <div class="axis-item" :class="{ active: index == store.timeline.currentIndex }" @click="store.setTimelineIndex(index)">
+              <span class="diamond"></span>
+              <span class="label">{{ item.time }}</span>
+            </div>
+          </template>
+          <template #default>
+            <div class="popover-content">{{ item.day }}</div>
+          </template>
+        </el-popover>
       </div>
     </el-scrollbar>
   </div>
@@ -48,6 +55,20 @@ const scrollToEnd = () => {
   })
 }
 
+const scrollLeft = () => {
+  const currentIndex = store.timeline.currentIndex
+  if (currentIndex > 0) {
+    store.setTimelineIndex(currentIndex - 1)
+  }
+}
+
+const scrollRight = () => {
+  const currentIndex = store.timeline.currentIndex
+  if (currentIndex < timelinelist.value.length - 1) {
+    store.setTimelineIndex(currentIndex + 1)
+  }
+}
+
 onMounted(scrollToEnd)
 watch(() => props.timeline, scrollToEnd, { deep: true })
 </script>
@@ -74,6 +95,7 @@ watch(() => props.timeline, scrollToEnd, { deep: true })
   width: clamp(1.5rem, 1.45vw, 1.8rem);
   height: clamp(1.5rem, 1.45vw, 1.8rem);
   margin-right: 0.5rem;
+  cursor: pointer;
 }
 .axis-line-container{
   width: calc(100% - clamp(1.5rem, 1.45vw, 1.8rem) - clamp(1.5rem, 1.45vw, 1.8rem) - 1rem);
@@ -131,5 +153,67 @@ watch(() => props.timeline, scrollToEnd, { deep: true })
 
 .axis-item.active .label {
   color: #fff381;
+}
+
+/* popover 样式 */
+:global(.time-popover.el-popper) {
+  background: linear-gradient(180deg, rgba(0, 50, 115, 0.95) 0%, rgba(0, 50, 115, 0.85) 60%) !important;
+  border: 1px solid rgba(55, 159, 255, 0.5) !important;
+  font-size: 12px;
+  color: #e5f8ff !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+:global(.time-popover.el-popper .el-popper__arrow::before) {
+  border-color: rgba(0, 50, 115, 0.95) !important;
+}
+
+:global(.time-popover.el-popper .el-popper__arrow::after) {
+  border-color: rgba(0, 50, 115, 0.95) !important;
+}
+
+:global(.time-popover.el-popper[data-popper-placement^=top] .el-popper__arrow::before) {
+  border-color: rgba(0, 50, 115, 0.95) !important;
+}
+
+:global(.time-popover.el-popper[data-popper-placement^=top] .el-popper__arrow::after) {
+  border-color: rgba(0, 50, 115, 0.95) !important;
+}
+
+:global(.time-popover .el-popover__title) {
+  color: #e5f8ff !important;
+  font-size: 0.8rem !important;
+}
+
+:global(.time-popover .el-popover__content) {
+  color: #e5f8ff !important;
+  font-size: 0.8rem !important;
+  padding: 0.3rem 0.5rem;
+}
+</style>
+
+<style>
+/* popover 全局样式 */
+.time-popover.el-popper {
+  background: linear-gradient(180deg, rgba(0, 50, 115, 0.75) 0%, rgba(0, 50, 115, 0.65) 100%) !important;
+  border: 1px solid rgba(0, 50, 115, 0.7) !important;
+  color: #e5f8ff !important;
+  width: auto !important;
+  padding: 0.2rem 0.5rem !important;
+}
+
+.time-popover.el-popper .el-popper__arrow::before,
+.time-popover.el-popper[data-popper-placement^=top] .el-popper__arrow::before {
+  background: linear-gradient(180deg, rgba(0, 50, 115, 0.75) 0%, rgba(0, 50, 115, 0.65) 100%) !important;
+}
+
+.time-popover .el-popover__title {
+  color: #e5f8ff !important;
+}
+
+.time-popover .el-popover__content,
+.time-popover .popover-content {
+  color: #e5f8ff !important;
 }
 </style>

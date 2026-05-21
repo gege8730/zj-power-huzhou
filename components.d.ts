@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     BasePanel: typeof import('./src/components/common/BasePanel.vue')['default']
     EChart: typeof import('./src/components/common/EChart.vue')['default']
+    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ImportantMaterialsPanel: typeof import('./src/components/right/ImportantMaterialsPanel.vue')['default']
     LayerToolbar: typeof import('./src/components/center/LayerToolbar.vue')['default']
@@ -29,5 +30,8 @@ declare module 'vue' {
     WeatherFactorsPanel: typeof import('./src/components/left/WeatherFactorsPanel.vue')['default']
     WeatherForecastPanel: typeof import('./src/components/left/WeatherForecastPanel.vue')['default']
     WeeklyForecastPanel: typeof import('./src/components/left/WeeklyForecastPanel.vue')['default']
+  }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

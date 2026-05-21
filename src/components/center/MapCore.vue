@@ -19,7 +19,6 @@ import {
 } from '@zjqx/gridfield';
 import type { ColorScaleJson, WeatherGridJson, ClipGeometryInput } from '@zjqx/gridfield';
 import { useMapStore } from '@/store'
-import { getDataFile } from '@/api/weather'
 
 const store = useMapStore()
 const colorConfig: ColorScaleJson = {
@@ -59,7 +58,7 @@ onMounted(async () => {
     try {
         // 初始化地图
         zjqxMap = ZJQXMap.initMap('map', {
-            center: [30.5941, 119.686],
+            center: [30.7541, 119.786],
             zoom: 9.3,
             zoomSnap: 0.1,
             zoomDelta: 0.1,
@@ -78,7 +77,7 @@ onMounted(async () => {
         });
 
         // 先加载 geojson
-        const adminBoundary = await fetch('/sample/huz_county.geojson')
+        const adminBoundary = await fetch('/sample/huz.geojson')
             .then((res) => {
                 if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
                 return res.json() as Promise<ClipGeometryInput>;
@@ -157,12 +156,11 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* .leaflet-tile-pane {
-    filter: grayscale(150%) contrast(10%) brightness(170%) sepia(.1) invert(.85) saturate(200%) !important;
-} */
 .leaflet-tile-pane {
+    filter: grayscale(100%) sepia(30%) invert(100%) saturate(270%);
+    /* filter: grayscale(150%) contrast(10%) brightness(170%) sepia(.1) invert(.85) saturate(200%) !important; */
     /* filter: grayscale(150%) sepia(8%) invert(90%) saturate(100%) !important; */
-    filter: brightness(0.2) contrast(1.28) saturate(0.42) hue-rotate(200deg) grayscale(0.42) !important;
+    /* filter: brightness(0.2) contrast(1.28) saturate(0.42) hue-rotate(200deg) grayscale(0.42) !important; */
 }
 </style>
 

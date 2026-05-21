@@ -1,5 +1,5 @@
 <template>
-  <main class="map-stage fade-in">
+  <main class="map-stage fade-in" v-loading="store.mapRenderData.loading">
     <h2 class="map-title">{{ title }}</h2>
     <div class="weather-icons">
     </div>
@@ -25,7 +25,9 @@ import MapControlGroup from './MapControlGroup.vue'
 import TemperatureLegend from './TemperatureLegend.vue'
 import MapCore from './MapCore.vue'
 import TimeAxis from './TimeAxis.vue'
+import { useMapStore } from '@/store'
 
+const store = useMapStore()
 const props = defineProps<{
   title: string
   queryPlaceholder: string
@@ -157,5 +159,10 @@ const props = defineProps<{
 
 .mini-tab.wide {
   min-width: 11.8rem;
+}
+
+/* loading 遮罩半透明 */
+:deep(.el-loading-mask) {
+  background-color: rgba(0, 30, 60, 0.411) !important;
 }
 </style>

@@ -142,7 +142,21 @@ export const useMapStore = defineStore('map', () => {
     lastUpdateTime: null,
     error: null,
   })
-
+  // 地图标题
+  const maptitle = computed (() => {
+    const factor = `${currentOption.value.replace('h','小时')}${currentFactor.value.name}分布图`
+    const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
+    let time = dayjs(timeline.value.currentLabel.dateTime)
+    let map_time
+    if(duration == 'H'){
+      map_time = time.format('YYYY年MM月DD日HH时')
+    }else if(duration == 'D'){
+      map_time = time.subtract(1,'day').format('YYYY年MM月DD日HH时')+'-'+time.format('DD日HH时')
+    }else{
+      map_time = time.format('YYYY年MM月DD日HH时MM分')
+    }
+    return `${map_time} ${factor}`
+  })
   /** 要素文件内容缓存 */
   const dataCache = ref<Record<string, any>>({})
 
@@ -325,6 +339,7 @@ export const useMapStore = defineStore('map', () => {
     mapRenderData,
     refreshState,
     dataCache,
+    maptitle,
 
     // Actions
     setTimelineIndex,
