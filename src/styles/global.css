@@ -243,3 +243,21 @@ input {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(180, 180, 180, 0.5);
 }
+
+/* Datepicker dark theme override */
+.datepicker-wrapper,
+.datepicker-wrapper .el-date-picker,
+.datepicker-wrapper .el-date-picker *,
+.datepicker-wrapper .el-input,
+.datepicker-wrapper .el-input *,
+.datepicker-wrapper .el-input__wrapper,
+.datepicker-wrapper .el-input__wrapper *,
+.datepicker-wrapper .el-input__inner,
+.datepicker-wrapper .el-date-editor,
+.datepicker-wrapper .el-date-editor * {
+  background: rgba(0, 57, 103, .9) !important;
+  background-color: rgba(0, 57, 103, .9) !important;
+  color: #dff8ff !important;
+  border-color: #336ec799 !important;
+  box-shadow: none !important;
+}

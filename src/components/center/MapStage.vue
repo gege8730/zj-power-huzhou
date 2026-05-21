@@ -12,16 +12,17 @@
     <div class="map-bottom-tabs">
       <button class="mini-tab active" type="button">☀ 实况</button>
       <button class="mini-tab" type="button">☁ 预报</button>
-      <el-date-picker
-        class="wide"
-        v-model="baseTimeModel"
-        type="datetime"
-        format="YYYY年MM月DD日 HH时"
-        date-format="YYYY年MM月DD日"
-        time-format="HH时"
-        placeholder="选择时间"
-        :clearable="false"
-      />
+      <!-- <div class="datepicker-wrapper">
+        <el-date-picker
+          v-model="baseTimeModel"
+          type="datetime"
+          format="YYYY年MM月DD日 HH时"
+          date-format="YYYY年MM月DD日"
+          time-format="HH时"
+          placeholder="选择时间"
+          :clearable="false"
+        />
+      </div> -->
     </div>
     <TimeAxis :timeline="timeline" />
   </main>
@@ -179,33 +180,30 @@ const props = defineProps<{
   background-image: url('../../assets/bottom-button_active.png');
 }
 
-.wide {
+.datepicker-wrapper {
   min-width: 11.8rem;
   background: rgba(0, 57, 103, .9);
-  border-top-left-radius: .37037037vh;
-  border-top-right-radius: .37037037vh;
-  border-bottom-left-radius: .20833333vw;
-  border-bottom-right-radius: .20833333vw;
-  box-sizing: border-box;
-  border-width: 1px 1px 1px 0px;
-  border-style: solid;
-  border-color: #336ec799;
-  box-shadow: inset 1px 0 #67a3ff;
+  border: 1px solid #336ec799;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.datepicker-wrapper :deep(*) {
+  background: rgba(0, 57, 103, .9) !important;
+  background-color: rgba(0, 57, 103, .9) !important;
+}
+
+.datepicker-wrapper :deep(.el-input__wrapper) {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.datepicker-wrapper :deep(.el-input__inner) {
+  color: #dff8ff !important;
 }
 
 /* loading 遮罩半透明 */
 :deep(.el-loading-mask) {
   background-color: rgba(0, 30, 60, 0.411) !important;
-}
-
-.wide :deep(.el-input__wrapper) {
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 0.5rem;
-}
-
-.wide :deep(.el-input__inner) {
-  color: #dff8ff;
-  font-size: clamp(0.68rem, 0.7vw, 0.85rem);
 }
 </style>
