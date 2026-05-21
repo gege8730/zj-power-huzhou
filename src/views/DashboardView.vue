@@ -7,7 +7,14 @@
         <MapStage :title="initData.mapTitle" :query-placeholder="initData.queryPlaceholder" :toolbar="initData.toolbar"
           :active-toolbar="initData.activeToolbar" :layer-groups="initData.layerGroups" :timeline="initData.timeline" />
         <RightSidebar :warning="initData.warning" :similar-days="initData.similarDays"
-          :material-tabs="initData.materialTabs" :material-files="initData.materialFiles" />
+          :material-tabs="initData.materialTabs" :material-files="initData.materialFiles"
+          @preview-material="handlePreviewMaterial" />
+        <PdfPreviewDialog
+          v-model="pdfPreviewVisible"
+          :file="previewFile"
+          :files="initData.materialFiles"
+          :tabs="initData.materialTabs"
+        />
       </div>
     </div>
   </div>
@@ -18,10 +25,11 @@ import TopHeader from '../components/common/TopHeader.vue'
 import LeftSidebar from '../components/left/LeftSidebar.vue'
 import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
+import PdfPreviewDialog from '../components/common/PdfPreviewDialog.vue'
 import rawMock from '../mock/dashboard.json'
 import { onMounted, ref, watch } from 'vue'
 import { getTimeList } from '@/api/weather'
-import type { DashboardMock } from '../types/dashboard'
+import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import 'element-plus/theme-chalk/el-message.css'
 import { useMapStore } from '@/store'
@@ -29,6 +37,18 @@ import dayjs from 'dayjs'
 
 const store = useMapStore()
 const initData = ref(rawMock as unknown as DashboardMock)
+const pdfPreviewVisible = ref(false)
+const previewFile = ref<MaterialFile | null>(null)
+
+const handlePreviewMaterial = (file: MaterialFile) => {
+  if (!file.pdfUrl && !file.filePath) {
+    ElMessage.warning('当前材料暂无可预览 PDF')
+    return
+  }
+
+  previewFile.value = file
+  pdfPreviewVisible.value = true
+}
 // 时间轴获取
 const fetchData = async () => {
   // 判断 ele 参数是否为空字符串

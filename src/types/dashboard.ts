@@ -37,6 +37,10 @@ export interface SimilarDay {
 export interface MaterialFile {
   title: string
   updateTime: string
+  pdfUrl?: string
+  filePath?: string
+  category?: string
+  type?: string
 }
 
 export interface LayerGroup {

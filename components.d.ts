@@ -13,7 +13,10 @@ declare module 'vue' {
   export interface GlobalComponents {
     BasePanel: typeof import('./src/components/common/BasePanel.vue')['default']
     EChart: typeof import('./src/components/common/EChart.vue')['default']
+    ElButton: typeof import('element-plus/es')['ElButton']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
+    ElDialog: typeof import('element-plus/es')['ElDialog']
+    ElEmpty: typeof import('element-plus/es')['ElEmpty']
     ElPopover: typeof import('element-plus/es')['ElPopover']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ImportantMaterialsPanel: typeof import('./src/components/right/ImportantMaterialsPanel.vue')['default']
@@ -22,6 +25,7 @@ declare module 'vue' {
     MapControlGroup: typeof import('./src/components/center/MapControlGroup.vue')['default']
     MapCore: typeof import('./src/components/center/MapCore.vue')['default']
     MapStage: typeof import('./src/components/center/MapStage.vue')['default']
+    PdfPreviewDialog: typeof import('./src/components/common/PdfPreviewDialog.vue')['default']
     RightSidebar: typeof import('./src/components/right/RightSidebar.vue')['default']
     ShortWarningPanel: typeof import('./src/components/right/ShortWarningPanel.vue')['default']
     SimilarDayPanel: typeof import('./src/components/right/SimilarDayPanel.vue')['default']

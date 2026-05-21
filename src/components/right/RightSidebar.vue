@@ -2,7 +2,7 @@
   <aside class="right-sidebar fade-in">
     <ShortWarningPanel :rows="warning" />
     <SimilarDayPanel :days="similarDays" />
-    <ImportantMaterialsPanel :tabs="materialTabs" :files="materialFiles" />
+    <ImportantMaterialsPanel :tabs="materialTabs" :files="materialFiles" @preview="emit('preview-material', $event)" />
   </aside>
 </template>
 
@@ -17,6 +17,10 @@ defineProps<{
   similarDays: SimilarDay[]
   materialTabs: string[]
   materialFiles: MaterialFile[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'preview-material', file: MaterialFile): void
 }>()
 </script>
 

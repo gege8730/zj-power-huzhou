@@ -8,166 +8,225 @@
   "mapSubtitle": "气温 / ℃",
   "queryPlaceholder": "经纬度查询",
   "weatherFactors": [
-    { "name": "气温", "options": ["整点", "日最高", "日最低"] },
-    { "name": "降水", "options": ["1h", "3h", "6h", "12h", "24h"]},
-    { "name": "风", "options": ["极大风", "平均风", "12h极大风"]},
-    { "name": "能见度", "options": ["整点", "日最小"] },
-    { "name": "相对湿度", "options": ["整点", "平均", "日最小"] },
-    { "name": "云量", "options": ["逐小时"] },
-    { "name": "辐射", "options": ["逐15分钟"] },
-    { "name": "强对流", "options": ["综合", "暴雨", "雷电", "大风"] }
+    {
+      "name": "气温",
+      "options": [
+        "整点",
+        "日最高",
+        "日最低"
+      ]
+    },
+    {
+      "name": "降水",
+      "options": [
+        "1h",
+        "3h",
+        "6h",
+        "12h",
+        "24h"
+      ]
+    },
+    {
+      "name": "风",
+      "options": [
+        "极大风",
+        "平均风",
+        "12h极大风"
+      ]
+    },
+    {
+      "name": "能见度",
+      "options": [
+        "整点",
+        "日最小"
+      ]
+    },
+    {
+      "name": "相对湿度",
+      "options": [
+        "整点",
+        "平均",
+        "日最小"
+      ]
+    },
+    {
+      "name": "云量",
+      "options": [
+        "逐小时"
+      ]
+    },
+    {
+      "name": "辐射",
+      "options": [
+        "逐15分钟"
+      ]
+    },
+    {
+      "name": "强对流",
+      "options": [
+        "综合",
+        "暴雨",
+        "雷电",
+        "大风"
+      ]
+    }
   ],
   "forecastText": "湖州市气象局2026年4月15日10时发布天气预报：今天多云到阴有小雨，明天阴有中到大阵雨或雷雨，后天阴有阵雨或雷雨。",
   "forecastDays": [
     {
-        "stationId": "58450",
-        "weekDay": "星期三",
-        "ww01": "0",
-        "ww01cn": "晴",
-        "ww02": "1",
-        "ww02cn": "多云",
-        "ws01": 7,
-        "wd01": 116,
-        "ws02": 6,
-        "wd02": 176,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
-        "ws01cn": "4-5级",
-        "wd01cn": "东南风",
-        "ws02cn": "3-4级",
-        "wd02cn": "南风",
-        "tmin": 16.4,
-        "tmax": 29.5,
-        "time": "2026-05-06 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期三",
+      "ww01": "0",
+      "ww01cn": "晴",
+      "ww02": "1",
+      "ww02cn": "多云",
+      "ws01": 7,
+      "wd01": 116,
+      "ws02": 6,
+      "wd02": 176,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
+      "ws01cn": "4-5级",
+      "wd01cn": "东南风",
+      "ws02cn": "3-4级",
+      "wd02cn": "南风",
+      "tmin": 16.4,
+      "tmax": 29.5,
+      "time": "2026-05-06 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期四",
-        "ww01": "7",
-        "ww01cn": "小雨",
-        "ww02": "7",
-        "ww02cn": "小雨",
-        "ws01": 7,
-        "wd01": 8,
-        "ws02": 6,
-        "wd02": 33,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/7.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/7.png",
-        "ws01cn": "4-5级",
-        "wd01cn": "北风",
-        "ws02cn": "3-4级",
-        "wd02cn": "东北风",
-        "tmin": 16.3,
-        "tmax": 28.8,
-        "time": "2026-05-07 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期四",
+      "ww01": "7",
+      "ww01cn": "小雨",
+      "ww02": "7",
+      "ww02cn": "小雨",
+      "ws01": 7,
+      "wd01": 8,
+      "ws02": 6,
+      "wd02": 33,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/7.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/7.png",
+      "ws01cn": "4-5级",
+      "wd01cn": "北风",
+      "ws02cn": "3-4级",
+      "wd02cn": "东北风",
+      "tmin": 16.3,
+      "tmax": 28.8,
+      "time": "2026-05-07 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期五",
-        "ww01": "1",
-        "ww01cn": "多云",
-        "ww02": "1",
-        "ww02cn": "多云",
-        "ws01": 6,
-        "wd01": 130,
-        "ws02": 6,
-        "wd02": 143,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
-        "ws01cn": "3-4级",
-        "wd01cn": "东南风",
-        "ws02cn": "3-4级",
-        "wd02cn": "东南风",
-        "tmin": 14.1,
-        "tmax": 24.3,
-        "time": "2026-05-08 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期五",
+      "ww01": "1",
+      "ww01cn": "多云",
+      "ww02": "1",
+      "ww02cn": "多云",
+      "ws01": 6,
+      "wd01": 130,
+      "ws02": 6,
+      "wd02": 143,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
+      "ws01cn": "3-4级",
+      "wd01cn": "东南风",
+      "ws02cn": "3-4级",
+      "wd02cn": "东南风",
+      "tmin": 14.1,
+      "tmax": 24.3,
+      "time": "2026-05-08 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期六",
-        "ww01": "1",
-        "ww01cn": "多云",
-        "ww02": "1",
-        "ww02cn": "多云",
-        "ws01": 7,
-        "wd01": 118,
-        "ws02": 6,
-        "wd02": 140,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
-        "ws01cn": "4-5级",
-        "wd01cn": "东南风",
-        "ws02cn": "3-4级",
-        "wd02cn": "东南风",
-        "tmin": 14.9,
-        "tmax": 24.5,
-        "time": "2026-05-09 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期六",
+      "ww01": "1",
+      "ww01cn": "多云",
+      "ww02": "1",
+      "ww02cn": "多云",
+      "ws01": 7,
+      "wd01": 118,
+      "ws02": 6,
+      "wd02": 140,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
+      "ws01cn": "4-5级",
+      "wd01cn": "东南风",
+      "ws02cn": "3-4级",
+      "wd02cn": "东南风",
+      "tmin": 14.9,
+      "tmax": 24.5,
+      "time": "2026-05-09 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期日",
-        "ww01": "1",
-        "ww01cn": "多云",
-        "ww02": "0",
-        "ww02cn": "晴",
-        "ws01": 6,
-        "wd01": 118,
-        "ws02": 5,
-        "wd02": 178,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/0.png",
-        "ws01cn": "3-4级",
-        "wd01cn": "东南风",
-        "ws02cn": "3-4级",
-        "wd02cn": "南风",
-        "tmin": 17.3,
-        "tmax": 28,
-        "time": "2026-05-10 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期日",
+      "ww01": "1",
+      "ww01cn": "多云",
+      "ww02": "0",
+      "ww02cn": "晴",
+      "ws01": 6,
+      "wd01": 118,
+      "ws02": 5,
+      "wd02": 178,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/1.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/0.png",
+      "ws01cn": "3-4级",
+      "wd01cn": "东南风",
+      "ws02cn": "3-4级",
+      "wd02cn": "南风",
+      "tmin": 17.3,
+      "tmax": 28,
+      "time": "2026-05-10 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期一",
-        "ww01": "0",
-        "ww01cn": "晴",
-        "ww02": "1",
-        "ww02cn": "多云",
-        "ws01": 6,
-        "wd01": 118,
-        "ws02": 5,
-        "wd02": 134,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
-        "ws01cn": "3-4级",
-        "wd01cn": "东南风",
-        "ws02cn": "3-4级",
-        "wd02cn": "东南风",
-        "tmin": 20.4,
-        "tmax": 31.9,
-        "time": "2026-05-11 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期一",
+      "ww01": "0",
+      "ww01cn": "晴",
+      "ww02": "1",
+      "ww02cn": "多云",
+      "ws01": 6,
+      "wd01": 118,
+      "ws02": 5,
+      "wd02": 134,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/1.png",
+      "ws01cn": "3-4级",
+      "wd01cn": "东南风",
+      "ws02cn": "3-4级",
+      "wd02cn": "东南风",
+      "tmin": 20.4,
+      "tmax": 31.9,
+      "time": "2026-05-11 08:00:00"
     },
     {
-        "stationId": "58450",
-        "weekDay": "星期二",
-        "ww01": "0",
-        "ww01cn": "晴",
-        "ww02": "0",
-        "ww02cn": "晴",
-        "ws01": 6,
-        "wd01": 111,
-        "ws02": 6,
-        "wd02": 133,
-        "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
-        "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/0.png",
-        "ws01cn": "3-4级",
-        "wd01cn": "东风",
-        "ws02cn": "3-4级",
-        "wd02cn": "东南风",
-        "tmin": 22,
-        "tmax": 33,
-        "time": "2026-05-12 08:00:00"
+      "stationId": "58450",
+      "weekDay": "星期二",
+      "ww01": "0",
+      "ww01cn": "晴",
+      "ww02": "0",
+      "ww02cn": "晴",
+      "ws01": 6,
+      "wd01": 111,
+      "ws02": 6,
+      "wd02": 133,
+      "ww01IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/08/0.png",
+      "ww02IconUrl": "https://smart.zj121.com/static/ww_icons/fcst_ruler/type5/20/0.png",
+      "ws01cn": "3-4级",
+      "wd01cn": "东风",
+      "ws02cn": "3-4级",
+      "wd02cn": "东南风",
+      "tmin": 22,
+      "tmax": 33,
+      "time": "2026-05-12 08:00:00"
     }
-],
-  "toolbar": ["雷 达", "地 闪", "台风路径", "输电线路"],
+  ],
+  "toolbar": [
+    "雷 达",
+    "地 闪",
+    "台风路径",
+    "输电线路"
+  ],
   "activeToolbar": "输电线路",
   "layerGroups": [
     {
@@ -175,9 +234,18 @@
       "switchable": true,
       "enabled": true,
       "items": [
-        { "name": "国家站", "checked": true },
-        { "name": "站名", "checked": true },
-        { "name": "数值", "checked": true }
+        {
+          "name": "国家站",
+          "checked": true
+        },
+        {
+          "name": "站名",
+          "checked": true
+        },
+        {
+          "name": "数值",
+          "checked": true
+        }
       ]
     },
     {
@@ -185,7 +253,10 @@
       "switchable": true,
       "enabled": true,
       "items": [
-        { "name": "数值", "checked": false }
+        {
+          "name": "数值",
+          "checked": false
+        }
       ]
     },
     {
@@ -193,34 +264,242 @@
       "switchable": false,
       "enabled": true,
       "items": [
-        { "name": "县界", "checked": true },
-        { "name": "县名", "checked": false },
-        { "name": "地图裁边", "checked": true },
-        { "name": "经纬度显示", "checked": false }
+        {
+          "name": "县界",
+          "checked": true
+        },
+        {
+          "name": "县名",
+          "checked": false
+        },
+        {
+          "name": "地图裁边",
+          "checked": true
+        },
+        {
+          "name": "经纬度显示",
+          "checked": false
+        }
       ]
     }
   ],
   "warning": [
-    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
-    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "高风险" } },
-    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "中风险" } },
-    { "town": "XX街道", "realtime": { "risk": "中风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "高风险" }, "h18": { "risk": "高风险" } },
-    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
-    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "中风险" }, "h17": { "risk": "中风险" }, "h18": { "risk": "高风险" } },
-    { "town": "XX街道", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } },
-    { "town": "XX镇", "realtime": { "risk": "低风险" }, "h16": { "risk": "低风险" }, "h17": { "risk": "低风险" }, "h18": { "risk": "低风险" } }
+    {
+      "town": "XX街道",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "低风险"
+      },
+      "h17": {
+        "risk": "低风险"
+      },
+      "h18": {
+        "risk": "低风险"
+      }
+    },
+    {
+      "town": "XX镇",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "中风险"
+      },
+      "h17": {
+        "risk": "中风险"
+      },
+      "h18": {
+        "risk": "高风险"
+      }
+    },
+    {
+      "town": "XX街道",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "低风险"
+      },
+      "h17": {
+        "risk": "中风险"
+      },
+      "h18": {
+        "risk": "中风险"
+      }
+    },
+    {
+      "town": "XX街道",
+      "realtime": {
+        "risk": "中风险"
+      },
+      "h16": {
+        "risk": "中风险"
+      },
+      "h17": {
+        "risk": "高风险"
+      },
+      "h18": {
+        "risk": "高风险"
+      }
+    },
+    {
+      "town": "XX镇",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "低风险"
+      },
+      "h17": {
+        "risk": "低风险"
+      },
+      "h18": {
+        "risk": "低风险"
+      }
+    },
+    {
+      "town": "XX镇",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "中风险"
+      },
+      "h17": {
+        "risk": "中风险"
+      },
+      "h18": {
+        "risk": "高风险"
+      }
+    },
+    {
+      "town": "XX街道",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "低风险"
+      },
+      "h17": {
+        "risk": "低风险"
+      },
+      "h18": {
+        "risk": "低风险"
+      }
+    },
+    {
+      "town": "XX镇",
+      "realtime": {
+        "risk": "低风险"
+      },
+      "h16": {
+        "risk": "低风险"
+      },
+      "h17": {
+        "risk": "低风险"
+      },
+      "h18": {
+        "risk": "低风险"
+      }
+    }
   ],
   "similarDays": [
-    { "date": "03月16日", "percent": 82, "high": 17.7, "low": 13.3, "rain": 0.0 },
-    { "date": "03月12日", "percent": 76, "high": 16.6, "low": 11.4, "rain": 0.0 },
-    { "date": "03月21日", "percent": 72, "high": 21.6, "low": 12.1, "rain": 4.7 }
+    {
+      "date": "03月16日",
+      "percent": 82,
+      "high": 17.7,
+      "low": 13.3,
+      "rain": 0.0
+    },
+    {
+      "date": "03月12日",
+      "percent": 76,
+      "high": 16.6,
+      "low": 11.4,
+      "rain": 0.0
+    },
+    {
+      "date": "03月21日",
+      "percent": 72,
+      "high": 21.6,
+      "low": 12.1,
+      "rain": 4.7
+    }
   ],
-  "materialTabs": ["一周预报", "旬预报", "月预报", "台风报告单"],
+  "materialTabs": [
+    "台风报告单",
+    "火险预报",
+    "中期预报",
+    "短期预报",
+    "月气候总结",
+    "旬预报",
+    "行业气象专报",
+    "月预报",
+    "电力日报"
+  ],
   "materialFiles": [
-    { "title": "202604151000", "updateTime": "2026年04月15日10时30分更新" },
-    { "title": "202604101000", "updateTime": "2026年04月10日11时更新" },
-    { "title": "202604061000", "updateTime": "2026年04月06日10时30分更新" },
-    { "title": "202604031000", "updateTime": "2026年04月03日11时更新" }
+    {
+      "title": "20251113170000",
+      "updateTime": "2025年11月13日17时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251113060000",
+      "updateTime": "2025年11月13日10时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251112210000",
+      "updateTime": "2025年11月12日20时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251112150000",
+      "updateTime": "2025年11月12日15时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251112090000",
+      "updateTime": "2025年11月12日09时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251112060000",
+      "updateTime": "2025年11月12日07时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251111210000",
+      "updateTime": "2025年11月11日21时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251111150000",
+      "updateTime": "2025年11月11日16时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251111090000",
+      "updateTime": "2025年11月11日09时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    },
+    {
+      "title": "20251111060000",
+      "updateTime": "2025年11月11日06时更新",
+      "pdfUrl": "/pdf/MSP3_ZJ-MO_TYREP_ME_LNO_ZJ_20251113170000_00000-07200.pdf",
+      "category": "台风报告单"
+    }
   ],
   "timeline": []
 }
