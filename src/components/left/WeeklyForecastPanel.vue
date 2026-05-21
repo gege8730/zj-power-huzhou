@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import EChart from '../common/EChart.vue';
 
 const props = defineProps<{
@@ -172,6 +172,15 @@ const option = computed(() => {
     ],
   };
 });
+
+// 监听数据源变化，确保图表在异步数据到达时重新渲染
+watch(
+  () => props.listArray,
+  (newVal) => {
+    console.log('七天预报数据更新，数据条数:', newVal?.length)
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped lang="less">

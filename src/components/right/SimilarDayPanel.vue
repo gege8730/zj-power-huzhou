@@ -1,6 +1,6 @@
 <template>
   <BasePanel title="相似日" class-name="similar-day">
-    <div class="sub-title-row">04月15日相似日</div>
+    <div class="sub-title-row">{{ titleDate || '相似日' }}</div>
     <div class="similar-list">
       <article v-for="day in days" :key="day.date" class="similar-item">
         <div class="similar-date">{{ day.date }}</div>
@@ -24,6 +24,7 @@ import BasePanel from '../common/BasePanel.vue'
 
 defineProps<{
   days: SimilarDay[]
+  titleDate?: string
 }>()
 </script>
 

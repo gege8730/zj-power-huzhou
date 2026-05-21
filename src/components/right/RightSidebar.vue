@@ -1,7 +1,7 @@
 <template>
   <aside class="right-sidebar fade-in">
     <ShortWarningPanel :rows="warning" />
-    <SimilarDayPanel :days="similarDays" />
+    <SimilarDayPanel :days="similarDays" :title-date="similarDate" />
     <ImportantMaterialsPanel :tabs="materialTabs" :files="materialFiles" @preview="emit('preview-material', $event)" />
   </aside>
 </template>
@@ -15,6 +15,7 @@ import SimilarDayPanel from './SimilarDayPanel.vue'
 defineProps<{
   warning: WarningRow[]
   similarDays: SimilarDay[]
+  similarDate?: string
   materialTabs: string[]
   materialFiles: MaterialFile[]
 }>()

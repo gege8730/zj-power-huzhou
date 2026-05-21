@@ -7,6 +7,7 @@
         <MapStage :title="initData.mapTitle" :query-placeholder="initData.queryPlaceholder" :toolbar="initData.toolbar"
           :active-toolbar="initData.activeToolbar" :layer-groups="initData.layerGroups" :timeline="initData.timeline" />
         <RightSidebar :warning="initData.warning" :similar-days="initData.similarDays"
+          :similar-date="similarDate"
           :material-tabs="initData.materialTabs" :material-files="initData.materialFiles"
           @preview-material="handlePreviewMaterial" />
         <PdfPreviewDialog
@@ -28,7 +29,7 @@ import RightSidebar from '../components/right/RightSidebar.vue'
 import PdfPreviewDialog from '../components/common/PdfPreviewDialog.vue'
 import rawMock from '../mock/dashboard.json'
 import { onMounted, ref, watch } from 'vue'
-import { getTimeList } from '@/api/weather'
+import { getTimeList, hzSmailDay, getDqByHz, dayForecast, getWarn } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import 'element-plus/theme-chalk/el-message.css'
@@ -37,6 +38,7 @@ import dayjs from 'dayjs'
 
 const store = useMapStore()
 const initData = ref(rawMock as unknown as DashboardMock)
+const similarDate = ref('相似日')
 const pdfPreviewVisible = ref(false)
 const previewFile = ref<MaterialFile | null>(null)
 
@@ -82,7 +84,74 @@ const fetchData = async () => {
     store.initTimeline(timeline)
   })
 }
+
+/** 初始化应用数据：相似日、短期预报、15天预报、当前预警 */
+const initAppData = async () => {
+  try {
+    // 并行请求所有初始化数据
+    const [similarRes, dqRes, forecastRes, warnRes] = await Promise.allSettled([
+      hzSmailDay({ type: 'month' }),
+      getDqByHz(),
+      dayForecast({ lat: '30.894408', lon: '120.086728' }),
+      getWarn({ area: '湖州' }),
+    ])
+    console.log('similarRes:', similarRes)
+    console.log('dqRes:', dqRes)
+    console.log('forecastRes:', forecastRes)
+    console.log('warnRes:', warnRes)
+
+    // 相似日数据（跳过第一条当日数据，取后面3条）
+    if (similarRes.status === 'fulfilled' && similarRes.value?.DS) {
+      const rawList = similarRes.value.DS as any[]
+      console.log('hzSmailDay 原始数据:', rawList)
+      // 取第一条的日期作为标题
+      const firstDt = String(rawList[0]?.datetime || '')
+      if (firstDt.length >= 8) {
+        similarDate.value = `${firstDt.slice(4, 6)}月${firstDt.slice(6, 8)}日相似日`
+      }
+      const mappedList = rawList.slice(1, 4).map((item: any) => {
+        const dt = String(item.datetime || '')
+        return {
+          date: `${dt.slice(4, 6)}月${dt.slice(6, 8)}日`,
+          percent: parseInt(String(item.smillar || '0').replace('%', '')),
+          high: parseFloat(String(item.tmax ?? '0')) / 10,
+          low: parseFloat(String(item.tmin ?? '0')) / 10,
+          rain: parseFloat(String(item.r24 ?? '0')),
+        }
+      })
+      console.log('hzSmailDay 映射后数据:', mappedList)
+      initData.value.similarDays = mappedList
+    } else {
+      console.warn('获取相似日失败:', (similarRes as PromiseRejectedResult).reason)
+    }
+
+    // 短期预报文本
+    if (dqRes.status === 'fulfilled' && dqRes.value?.DS) {
+      initData.value.forecastText = dqRes.value.DS
+    } else {
+      console.warn('获取短期预报失败:', (dqRes as PromiseRejectedResult).reason)
+    }
+
+    // 15天预报（取前7天）
+    if (forecastRes.status === 'fulfilled' && forecastRes.value?.DS) {
+      initData.value.forecastDays = (forecastRes.value.DS as any[]).slice(0, 7)
+    } else {
+      console.warn('获取15天预报失败:', (forecastRes as PromiseRejectedResult).reason)
+    }
+
+    // 当前预警
+    // if (warnRes.status === 'fulfilled' && warnRes.value?.DS) {
+    //   initData.value.warning = warnRes.value.DS
+    // } else {
+    //   console.warn('获取预警信息失败:', (warnRes as PromiseRejectedResult).reason)
+    // }
+  } catch (e) {
+    console.error('初始化应用数据失败:', e)
+  }
+}
+
 onMounted(async () => {
+  await initAppData()
   await fetchData()
 })
 watch(() => store.currentSelection, async (newLabel) => {

@@ -7,3 +7,23 @@ export function getTimeList(params: { ncType: string; ele: string; startTime:str
 export function getDataFile(params: { filePath: string; region: string;}) {
     return get('/api/getDataFile', params)
 }
+/**获取相似日 */
+export function hzSmailDay(params: { type: string;}) {
+    return get('/api/hzSmailDay', params)
+}
+/**获取短期预报 */
+export function getDqByHz() {
+    return get('/api/getDqByHz')
+}
+/**获取15天预报 */
+export function dayForecast(params: { lat: string;lon: string;}) {
+    return get('/api/dayForecast', params)
+}
+/**获取雷达 */
+export function radarList(params: { begintime: string;endtime: string;}) {
+    return get('/api/radarList', params)
+}
+/**获取当前预警 */
+export function getWarn(params: { area: string;}) {
+    return get('/api/warningNow', params)
+}
