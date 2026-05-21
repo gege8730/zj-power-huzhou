@@ -10,14 +10,12 @@
     top="2vh"
     @closed="handleClosed"
   >
+    <button class="pdf-close-btn" type="button" @click="dialogVisible = false">×</button>
+
     <div class="pdf-preview-shell">
       <aside class="pdf-material-aside">
         <div class="pdf-aside-title">
           <div class="pdf-title-text">重要材料</div>
-          <label class="pdf-search-box">
-            <span class="pdf-search-icon"></span>
-            <input v-model.trim="keyword" type="text" placeholder="请输入文件名搜索" />
-          </label>
         </div>
 
         <div class="pdf-tab-grid">
@@ -30,7 +28,6 @@
             @click="handleTabChange(index)"
           >
             {{ tab }}
-            <span v-if="index !== activeTabIndex" class="pdf-tab-dot"></span>
           </button>
         </div>
 
@@ -50,11 +47,11 @@
             </span>
           </button>
 
-          <el-empty v-if="pagedFiles.length === 0" :image-size="72" description="暂无匹配材料" />
+          <el-empty v-if="pagedFiles.length === 0" :image-size="72" description="暂无材料" />
         </div>
 
         <div class="pdf-page-bar">
-          <span class="pdf-total">共 {{ filteredFiles.length }} 条</span>
+          <span class="pdf-total">共 {{ tabFiles.length }} 条</span>
           <button class="pdf-page-btn" type="button" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">
             ‹
           </button>
@@ -79,7 +76,7 @@
         <div class="pdf-viewer-body" v-loading="loading">
           <iframe
             v-if="previewSrc"
-            :key="previewSrc"
+            :key="previewKey"
             class="pdf-frame"
             :src="previewSrc"
             title="PDF 预览"
@@ -88,8 +85,6 @@
           <el-empty v-else description="暂无可预览文件" />
         </div>
       </main>
-
-      <button class="pdf-close-btn" type="button" @click="dialogVisible = false">×</button>
     </div>
   </el-dialog>
 </template>
@@ -117,7 +112,6 @@ const emit = defineEmits<{
 
 const pageSize = 9
 const loading = ref(false)
-const keyword = ref('')
 const currentPage = ref(1)
 const activeTabIndex = ref(0)
 const selectedFile = ref<MaterialFile | null>(null)
@@ -146,19 +140,11 @@ const tabFiles = computed(() => {
   return allFiles.value.filter((item) => getMaterialType(item) === activeTab.value)
 })
 
-const filteredFiles = computed(() => {
-  const text = keyword.value.trim().toLowerCase()
-  if (!text) return tabFiles.value
-  return tabFiles.value.filter((item) => {
-    return `${item.title}${item.updateTime}`.toLowerCase().includes(text)
-  })
-})
-
-const pageCount = computed(() => Math.max(1, Math.ceil(filteredFiles.value.length / pageSize)))
+const pageCount = computed(() => Math.max(1, Math.ceil(tabFiles.value.length / pageSize)))
 
 const pagedFiles = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return filteredFiles.value.slice(start, start + pageSize)
+  return tabFiles.value.slice(start, start + pageSize)
 })
 
 const pagerItems = computed<Array<number | string>>(() => {
@@ -200,6 +186,12 @@ const previewSrc = computed(() => {
   return `${encodeURI(normalizedUrl)}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`
 })
 
+const previewKey = computed(() => {
+  const file = selectedFile.value
+  if (!file) return previewSrc.value
+  return `${file.title}-${file.updateTime}-${previewSrc.value}`
+})
+
 function isSameMaterial(a?: MaterialFile | null, b?: MaterialFile | null) {
   if (!a || !b) return false
   return a.title === b.title && a.updateTime === b.updateTime
@@ -207,7 +199,7 @@ function isSameMaterial(a?: MaterialFile | null, b?: MaterialFile | null) {
 
 function findPageByFile(file: MaterialFile | null) {
   if (!file) return 1
-  const index = filteredFiles.value.findIndex((item) => isSameMaterial(item, file))
+  const index = tabFiles.value.findIndex((item) => isSameMaterial(item, file))
   return index >= 0 ? Math.floor(index / pageSize) + 1 : 1
 }
 
@@ -220,7 +212,6 @@ function syncActiveTab(file: MaterialFile | null) {
 }
 
 function initSelectedFile(file: MaterialFile | null) {
-  keyword.value = ''
   selectedFile.value = file || allFiles.value[0] || null
   syncActiveTab(selectedFile.value)
 
@@ -235,8 +226,15 @@ function handleTabChange(index: number) {
   currentPage.value = 1
 
   nextTick(() => {
-    if (filteredFiles.value.length && !filteredFiles.value.some((item) => isSameMaterial(item, selectedFile.value))) {
-      selectFile(filteredFiles.value[0])
+    const nextFile = tabFiles.value[0] || null
+    if (!tabFiles.value.length) {
+      selectedFile.value = null
+      loading.value = false
+      return
+    }
+
+    if (!tabFiles.value.some((item) => isSameMaterial(item, selectedFile.value))) {
+      selectFile(nextFile as MaterialFile)
     }
   })
 }
@@ -263,10 +261,6 @@ watch(
     if (props.modelValue) initSelectedFile(file)
   }
 )
-
-watch(keyword, () => {
-  currentPage.value = 1
-})
 
 watch(pageCount, (count) => {
   if (currentPage.value > count) currentPage.value = count
@@ -303,12 +297,10 @@ const handleClosed = () => {
 
 .pdf-aside-title {
   flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
   min-height: clamp(2.25rem, 4vh, 2.8rem);
-  padding: 0.36rem 0.65rem;
+  padding: 0.36rem 0.8rem;
   background: linear-gradient(90deg, rgba(20, 93, 164, 0.98), rgba(10, 61, 123, 0.84));
   border-bottom: 1px solid rgba(76, 194, 255, 0.26);
 }
@@ -338,57 +330,11 @@ const handleClosed = () => {
   box-shadow: 0 0 0.5rem rgba(64, 207, 255, 0.85);
 }
 
-.pdf-search-box {
-  min-width: 0;
-  height: clamp(1.7rem, 2.8vh, 2rem);
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0 0.65rem;
-  border: 1px solid rgba(42, 163, 246, 0.54);
-  border-radius: 0.14rem;
-  background: rgba(2, 48, 94, 0.72);
-  box-shadow: inset 0 0 0.8rem rgba(22, 137, 227, 0.18);
-}
-
-.pdf-search-icon {
-  width: 0.78rem;
-  height: 0.78rem;
-  flex: 0 0 auto;
-  border: 1px solid rgba(90, 225, 255, 0.9);
-  border-radius: 50%;
-  position: relative;
-}
-
-.pdf-search-icon::after {
-  content: "";
-  position: absolute;
-  right: -0.35rem;
-  bottom: -0.25rem;
-  width: 0.42rem;
-  height: 1px;
-  transform: rotate(45deg);
-  background: rgba(90, 225, 255, 0.9);
-}
-
-.pdf-search-box input {
-  min-width: 0;
-  width: 100%;
-  border: none;
-  outline: none;
-  color: #dff8ff;
-  background: transparent;
-  font-size: clamp(0.72rem, 0.68vw, 0.84rem);
-}
-
-.pdf-search-box input::placeholder {
-  color: rgba(184, 224, 255, 0.78);
-}
 
 .pdf-tab-grid {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.48rem;
   padding: 0.55rem 0.7rem 0.45rem;
 }
@@ -413,16 +359,6 @@ const handleClosed = () => {
   background: linear-gradient(180deg, rgba(0, 115, 202, 0.96), rgba(0, 74, 145, 0.96));
 }
 
-.pdf-tab-dot {
-  position: absolute;
-  top: -0.22rem;
-  right: -0.22rem;
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 50%;
-  background: #ff6b7a;
-  box-shadow: 0 0 0.45rem rgba(255, 86, 101, 0.85);
-}
 
 .pdf-file-list {
   min-height: 0;
@@ -542,14 +478,18 @@ const handleClosed = () => {
 }
 
 .pdf-viewer-wrap {
+  position: relative;
   min-width: 0;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(192, 208, 220, 0.62);
   background: #2e2e2e;
 }
 
 .pdf-viewer-body {
+  position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -568,7 +508,7 @@ const handleClosed = () => {
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  z-index: 5;
+  z-index: 3000;
   width: 1.85rem;
   height: 1.85rem;
   display: flex;
@@ -577,10 +517,11 @@ const handleClosed = () => {
   color: #eafcff;
   border: 1px solid rgba(152, 216, 255, 0.5);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.36);
+  background: rgba(0, 31, 62, 0.86);
   cursor: pointer;
   font-size: 1.35rem;
   line-height: 1;
+  pointer-events: auto;
 }
 
 .pdf-close-btn:hover {
@@ -606,6 +547,7 @@ const handleClosed = () => {
 }
 
 .pdf-preview-dialog .el-dialog__body {
+  position: relative;
   height: 100%;
   padding: 0;
   overflow: hidden;

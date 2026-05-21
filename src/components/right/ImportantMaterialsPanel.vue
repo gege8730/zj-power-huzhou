@@ -7,21 +7,21 @@
         class="badge-button"
         :class="{ active: index === activeTabIndex }"
         type="button"
-        @click="activeTabIndex = index"
+        @click="handleTabChange(index)"
       >
         {{ tab }}
       </button>
     </div>
     <div class="file-list">
       <div
-        v-for="(file, index) in files"
+        v-for="(file, index) in visibleFiles"
         :key="`${file.title}-${index}`"
         class="file-card neon-border"
-        :class="{ active_file: index === activeFileIndex }"
+        :class="{ active_file: isActiveFile(file) }"
         role="button"
         tabindex="0"
-        @click="handlePreview(file, index)"
-        @keyup.enter="handlePreview(file, index)"
+        @click="handlePreview(file)"
+        @keyup.enter="handlePreview(file)"
       >
         <div class="file-icon"><img src="../../assets/word.png" alt="icon"></div>
         <div class="file-info">
@@ -34,11 +34,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { MaterialFile } from '../../types/dashboard'
 import BasePanel from '../common/BasePanel.vue'
 
-defineProps<{
+const props = defineProps<{
   tabs: string[]
   files: MaterialFile[]
 }>()
@@ -48,12 +48,53 @@ const emit = defineEmits<{
 }>()
 
 const activeTabIndex = ref(0)
-const activeFileIndex = ref(0)
+const selectedFile = ref<MaterialFile | null>(null)
 
-const handlePreview = (file: MaterialFile, index: number) => {
-  activeFileIndex.value = index
+const activeTab = computed(() => props.tabs[activeTabIndex.value] || '')
+const hasMaterialCategory = computed(() => props.files.some((file) => Boolean(getMaterialType(file))))
+
+const visibleFiles = computed(() => {
+  if (!hasMaterialCategory.value || !activeTab.value) return props.files
+  return props.files.filter((file) => getMaterialType(file) === activeTab.value)
+})
+
+function getMaterialType(file: MaterialFile | null) {
+  return file?.category || file?.type || ''
+}
+
+function isSameMaterial(a?: MaterialFile | null, b?: MaterialFile | null) {
+  if (!a || !b) return false
+  return a.title === b.title && a.updateTime === b.updateTime
+}
+
+function syncDefaultTab() {
+  const firstFileType = getMaterialType(props.files[0] || null)
+  const index = props.tabs.findIndex((tab) => tab === firstFileType)
+  if (index >= 0) activeTabIndex.value = index
+}
+
+function handleTabChange(index: number) {
+  activeTabIndex.value = index
+  selectedFile.value = visibleFiles.value[0] || null
+}
+
+function isActiveFile(file: MaterialFile) {
+  return isSameMaterial(file, selectedFile.value)
+}
+
+const handlePreview = (file: MaterialFile) => {
+  selectedFile.value = file
   emit('preview', file)
 }
+
+watch(
+  () => [props.tabs, props.files] as const,
+  () => {
+    syncDefaultTab()
+    selectedFile.value = visibleFiles.value[0] || null
+  },
+  { immediate: true, deep: true }
+)
 </script>
 
 <style scoped>
