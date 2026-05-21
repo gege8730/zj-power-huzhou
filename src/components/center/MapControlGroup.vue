@@ -7,8 +7,8 @@
           <i />
         </span>
       </header>
-      <div class="check-grid" :class="{ 'special-layout': group.title === groups[2]?.title }">
-        <label v-for="(item, index) in group.items" :key="`${group.title}-${item.name}`" class="check-item" :class="{ 'full-width': group.title === groups[2]?.title && index >= 2 }">
+      <div class="check-grid">
+        <label v-for="(item, index) in group.items" :key="`${group.title}-${item.name}`" class="check-item" >
           <span class="checkbox" :class="{ checked: item.checked }"></span>
           {{ item.name }}
         </label>
@@ -33,7 +33,7 @@ defineProps<{
   width: clamp(8.5rem, 10.7vw, 10.2rem);
   display: flex;
   flex-direction: column;
-  gap: clamp(0.4rem, 0.8vh, 0.55rem);
+  gap: clamp(0.5rem, 1.7vh, 1.05rem);
   z-index: 5;
 }
 

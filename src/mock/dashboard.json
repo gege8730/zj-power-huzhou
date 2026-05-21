@@ -235,10 +235,6 @@
       "enabled": true,
       "items": [
         {
-          "name": "国家站",
-          "checked": true
-        },
-        {
           "name": "站名",
           "checked": true
         },
@@ -255,7 +251,7 @@
       "items": [
         {
           "name": "数值",
-          "checked": false
+          "checked": true
         }
       ]
     },
@@ -273,12 +269,16 @@
           "checked": false
         },
         {
-          "name": "地图裁边",
+          "name": "乡镇界",
           "checked": true
         },
         {
-          "name": "经纬度显示",
+          "name": "乡镇名",
           "checked": false
+        },
+        {
+          "name": "地图裁边",
+          "checked": true
         }
       ]
     }
