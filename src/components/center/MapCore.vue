@@ -91,7 +91,7 @@ onMounted(async () => {
         const updateGridLayer = (gridData: any) => {
             if (!gridData || !zjqxMap) return;
 
-            const grid = normalizeWeatherGrid(gridData, { rowOrder: 'north-to-south' });
+            const grid = normalizeWeatherGrid(gridData, { rowOrder: 'south-to-north' });
 
             if (layer) {
                 layer.setData(grid);
@@ -137,7 +137,8 @@ onMounted(async () => {
                 updateGridLayer(newLabel);
             }else{
                 layer.update({
-                    data:newLabel
+                    data:newLabel,
+                    normalize: { rowOrder: 'south-to-north' },
                 })
             }
         }, { immediate: true });

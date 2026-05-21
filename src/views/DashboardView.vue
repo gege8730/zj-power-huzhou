@@ -22,6 +22,8 @@ import rawMock from '../mock/dashboard.json'
 import { onMounted, ref, watch } from 'vue'
 import { getTimeList } from '@/api/weather'
 import type { DashboardMock } from '../types/dashboard'
+import { ElMessage } from 'element-plus'
+import 'element-plus/theme-chalk/el-message.css'
 import { useMapStore } from '@/store'
 import dayjs from 'dayjs'
 
@@ -29,6 +31,12 @@ const store = useMapStore()
 const initData = ref(rawMock as unknown as DashboardMock)
 // 时间轴获取
 const fetchData = async () => {
+  // 判断 ele 参数是否为空字符串
+  if (store.timelineParams.ele === '') {
+    console.warn('当前要素参数为空，无法获取时间列表')
+    ElMessage.warning('该要素还在开发中')
+    return
+  }
   await getTimeList(store.timelineParams).then((response) => {
     const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
     let timeline = response.DS

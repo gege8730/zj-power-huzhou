@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
-import {getDataFile,getTimeList} from '@/api/weather'
+import {getDataFile} from '@/api/weather'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
