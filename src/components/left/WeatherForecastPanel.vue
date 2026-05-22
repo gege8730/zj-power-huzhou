@@ -37,6 +37,7 @@ const props = defineProps<{
   line-height: 1.62;
   text-align: left;
   overflow: auto;
+  white-space: pre-line;
   max-height: clamp( 4rem,7.3vh,20%);
 }
 
