@@ -51,12 +51,26 @@ const timelinelist = computed(() => props.timeline.map(item => {
 }))
 const scrollbarRef = ref()
 
+const scrollToStart = () => {
+  nextTick(() => {
+    scrollbarRef.value?.setScrollLeft(0)
+  })
+}
+
 const scrollToEnd = () => {
   nextTick(() => {
     if (scrollbarRef.value) {
       scrollbarRef.value.setScrollLeft(timelinelist.value.length * 50)
     }
   })
+}
+
+const scrollToDefault = () => {
+  if (store.productMode === 'forecast') {
+    scrollToStart()
+    return
+  }
+  scrollToEnd()
 }
 
 const scrollLeft = () => {
@@ -73,8 +87,8 @@ const scrollRight = () => {
   }
 }
 
-onMounted(scrollToEnd)
-watch(() => props.timeline, scrollToEnd, { deep: true })
+onMounted(scrollToDefault)
+watch(() => [props.timeline, store.productMode], scrollToDefault, { deep: true })
 </script>
 
 <style scoped>

@@ -175,6 +175,7 @@ const props = defineProps<{
   background-image: url('../../assets/bottom-button.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
+  cursor: pointer;
 }
 
 .mini-tab.active {

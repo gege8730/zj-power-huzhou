@@ -36,23 +36,29 @@ const clickFactorOption = (FType: FactorType, option_index: number) => {
 
 <style scoped>
 .weather-factors {
-  flex: 0 0 39%;
-  min-height: 18rem;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.weather-factors :deep(.panel-body) {
+  overflow: visible;
+  padding-top: clamp(0.48rem, 0.75vh, 0.7rem);
+  padding-bottom: clamp(0.48rem, 0.75vh, 0.7rem);
 }
 
 .factor-list {
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.28rem, 0.98vh, 0.25rem);
+  gap: clamp(0.22rem, 0.52vh, 0.36rem);
 }
 
 .factor-row {
-  min-height: clamp(1.45rem, 3vh, 2.05rem);
+  min-height: clamp(1.3rem, 2.45vh, 1.75rem);
   display: grid;
   grid-template-columns: minmax(7rem, 20%) 1fr;
   align-items: center;
-  padding: 0.2rem clamp(0.55rem, 0.65vw, 0.8rem) 0.3rem clamp(0.55rem, 0.65vw, 0.8rem);
+  padding: 0.14rem clamp(0.55rem, 0.65vw, 0.8rem) 0.18rem clamp(0.55rem, 0.65vw, 0.8rem);
   background: rgba(17, 75, 143, 0.65);
 }
 

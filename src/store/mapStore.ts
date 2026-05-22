@@ -272,9 +272,16 @@ export const useMapStore = defineStore('map', () => {
    */
   function setTimelineLabels(labels: Array<{ dateTime: string; filePath: string }>) {
     timeline.value.labels = labels
-    const lastIndex = labels.length - 1
-    timeline.value.currentIndex = lastIndex >= 0 ? lastIndex : 0
-    timeline.value.currentLabel = labels[lastIndex] || labels[0] || { dateTime: '', filePath: '' }
+
+    if (!labels.length) {
+      timeline.value.currentIndex = 0
+      timeline.value.currentLabel = { dateTime: '', filePath: '' }
+      return
+    }
+
+    const defaultIndex = isForecastMode.value ? 0 : labels.length - 1
+    timeline.value.currentIndex = defaultIndex
+    timeline.value.currentLabel = labels[defaultIndex]
   }
 
   /**

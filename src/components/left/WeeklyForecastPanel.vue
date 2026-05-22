@@ -24,9 +24,14 @@
         <div class="sectionTitleIcon">
           <img v-if="value.imagNightIcon" class="weatherIcon" :src="value.imagNightIcon" alt="" />
         </div>
-
         <div class="home7_temp nightTempText">
           {{ value.WEA24 }}
+        </div>
+        <div class="home7_temp nightTempText">
+          {{ value.wd02cn }}
+        </div>
+        <div class="home7_temp nightTempText">
+          {{ value.ws02cn }}
         </div>
       </div>
     </div>
@@ -187,7 +192,7 @@ watch(
 .home7dayBackView {
   position: relative;
   width: 100%;
-  height: calc(55%);
+  height: calc(60%);
   box-sizing: border-box;
 }
 
@@ -209,7 +214,7 @@ watch(
 
 .dayTempHContentBackBiew {
   position: relative;
-  height: calc(100% - 145px);
+  height: calc(100% - 185px);
   width: 100%;
 }
 
@@ -261,7 +266,7 @@ watch(
   color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   text-align: center;
-  position: absolute;
+  position: relative;
   bottom: 0;
   left: 0 ;
   width: calc(100%);

@@ -1,6 +1,5 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ElMessage } from 'element-plus'
 import { getWarn } from '@/api/weather'
 
 export type WarningSeverity = 'Red' | 'Orange' | 'Yellow' | 'Blue' | string
@@ -84,15 +83,8 @@ export const useWarningStore = defineStore('warning', () => {
       const res = await getWarn({ area })
       warnings.value = normalizeWarningList((res as any)?.DS ?? res)
     } catch (error) {
-      console.warn('预警接口请求失败，尝试使用本地样例数据:', error)
-      try {
-        const localRes = await fetch('/sample/alert.json')
-        warnings.value = normalizeWarningList(await localRes.json())
-      } catch (localError) {
-        console.error('预警样例数据加载失败:', localError)
-        warnings.value = []
-        ElMessage.error('气象预警加载失败')
-      }
+      console.error('预警接口请求失败:', error)
+      warnings.value = []
     } finally {
       loading.value = false
     }

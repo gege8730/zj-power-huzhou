@@ -28,17 +28,25 @@ const props = defineProps<{
   display: flex;
   flex-direction: column;
   padding-top: clamp(0.6rem, 1.1vh, 0.8rem);
+  overflow: hidden;
 }
 
 .forecast-text {
-  margin: clamp(0.55rem, 1.1vh, 0.9rem) 0.5rem clamp(0.65rem, 1.8vh, 1.1rem);
+  flex: 0 0 clamp(6.6rem, 13.6vh, 9.6rem);
+  margin: clamp(0.55rem, 1.1vh, 0.9rem) 0.5rem clamp(0.65rem, 1.4vh, 0.95rem);
   color: #f1faff;
   font-size: clamp(0.8rem, 0.84vw, 0.9rem);
   line-height: 1.62;
   text-align: left;
   overflow: auto;
   white-space: pre-line;
-  max-height: clamp( 4rem,7.3vh,20%);
+  max-height: none;
+}
+
+.forecast-body :deep(.home7dayBackView) {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 }
 
 .seven-title {
