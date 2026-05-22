@@ -1,6 +1,6 @@
 <template>
-    <div class="map-container">
-        <div id="map" ref="mapContainer"></div>
+    <div class="map-container" ref="mapContainer">
+        <div id="map"></div>
     </div>
 </template>
 
@@ -23,35 +23,6 @@ import { useLayerToolbarStore, useMapControlGroupStore, useMapStore } from '@/st
 const store = useMapStore()
 const layerToolbarStore = useLayerToolbarStore()
 const mapControlStore = useMapControlGroupStore()
-const colorConfig: ColorScaleJson = {
-    fieldName: 'temp',
-    stops: [
-        { value: -24, color: 'rgb(0, 0, 255)' },
-        { value: -16, color: 'rgb(0, 69, 255)' },
-        { value: -12, color: 'rgb(0, 101, 255)' },
-        { value: -8, color: 'rgb(0, 134, 255)' },
-        { value: -6, color: 'rgb(0, 166, 255)' },
-        { value: -4, color: 'rgb(0, 199, 255)' },
-        { value: -2, color: 'rgb(0, 235, 255)' },
-        { value: 0, color: 'rgb(0, 255, 247)' },
-        { value: 2, color: 'rgb(0, 255, 181)' },
-        { value: 4, color: 'rgb(0, 255, 115)' },
-        { value: 6, color: 'rgb(0, 255, 41)' },
-        { value: 8, color: 'rgb(115, 255, 0)' },
-        { value: 12, color: 'rgb(148, 255, 0)' },
-        { value: 16, color: 'rgb(181, 255, 0)' },
-        { value: 20, color: 'rgb(214, 255, 0)' },
-        { value: 24, color: 'rgb(255, 231, 0)' },
-        { value: 26, color: 'rgb(255, 199, 0)' },
-        { value: 28, color: 'rgb(255, 162, 0)' },
-        { value: 30, color: 'rgb(255, 130, 0)' },
-        { value: 32, color: 'rgb(255, 97, 0)' },
-        { value: 35, color: 'rgb(255, 65, 0)' },
-        { value: 37, color: 'rgb(255, 40, 0)' },
-        { value: 38, color: 'rgb(214, 0, 0)' },
-        { value: 40, color: 'rgb(140, 0, 0)' }
-    ]
-};
 
 const mapContainer = ref<HTMLElement | null>(null);
 let zjqxMap: ReturnType<typeof ZJQXMap.initMap> | null = null;
@@ -87,9 +58,6 @@ onMounted(async () => {
                 return res.json() as Promise<ClipGeometryInput>;
             });
 
-        const colorize = createColorScale(colorConfig, { mode: 'step', stopKey: 'stops' });
-        const palette = createPaletteTextureData(colorConfig, { mode: 'step', stopKey: 'stops' });
-
         let layer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
 
         const getGridControlOptions = () => ({
@@ -113,6 +81,44 @@ onMounted(async () => {
                 fontWeight: 500,
             },
         });
+
+        /**
+         * 能见度接口色标单位是 km，而格点数据值是 m。
+         * 这里只为填色渲染换算阈值，store 中的原始色标和格点文本层都不做转换。
+         */
+        const getRenderColorStops = () => {
+            const config = store.mapRenderData.colorConfig
+            const stops = config?.stops || []
+            const unit = String(config?.unit || '').trim().toLowerCase()
+            const needVisibilityMeterScale = store.currentFactorType === 'visibility' && ['km', '公里', '千米'].includes(unit)
+
+            if (!needVisibilityMeterScale) return stops
+
+            return stops.map((item) => ({
+                ...item,
+                value: item.value * 1000,
+            }))
+        }
+
+        const getColorScaleResources = () => {
+            const config = store.mapRenderData.colorConfig
+            if (!config?.stops?.length) return null
+
+            const colorConfig: ColorScaleJson = {
+                fieldName: config.fieldName,
+                stops: getRenderColorStops(),
+            }
+            const colorize = createColorScale(colorConfig, { mode: 'step', stopKey: 'stops' });
+            const palette = createPaletteTextureData(colorConfig, { mode: 'step', stopKey: 'stops' });
+            return { colorConfig, colorize, palette }
+        }
+
+        const removeGridLayer = () => {
+            if (layer && zjqxMap) {
+                zjqxMap.removeZJQXLayer(layer);
+                layer = null;
+            }
+        }
 
         const applyGridControlOptions = () => {
             if (!layer) return;
@@ -152,20 +158,29 @@ onMounted(async () => {
             }
         };
 
-        const updateGridLayer = (gridData: any) => {
-            if (!gridData || !zjqxMap) return;
-
-            const grid = normalizeWeatherGrid(gridData, { rowOrder: 'south-to-north' });
+        const updateGridLayer = () => {
+            const gridData = store.mapRenderData.gridData
+            const colorResources = getColorScaleResources()
+            if (!gridData || !zjqxMap || !colorResources) {
+                removeGridLayer();
+                return;
+            }
 
             if (layer) {
-                layer.setData(grid);
+                layer.update({
+                    data: gridData,
+                    normalize: { rowOrder: 'south-to-north' },
+                    palette: colorResources.palette,
+                    colorize: colorResources.colorize,
+                })
                 applyGridControlOptions();
                 applyGridClip();
             } else {
+                const grid = normalizeWeatherGrid(gridData, { rowOrder: 'south-to-north' });
                 layer = new ZJQXGridFieldLayer({
                     data: grid,
-                    palette,
-                    colorize,
+                    palette: colorResources.palette,
+                    colorize: colorResources.colorize,
                     clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
                     ...getGridControlOptions(),
                     popup: false,
@@ -175,31 +190,9 @@ onMounted(async () => {
             }
         };
 
-        // 初始化时检查数据
-        if (store.mapRenderData.gridData) {
-            updateGridLayer(store.mapRenderData.gridData);
-        }
-
-        // 监听 timeline 变化
-        watch(() => store.mapRenderData.gridData, (newLabel) => {
-            if(!newLabel){
-                if(layer){
-                    zjqxMap!.removeZJQXLayer(layer);
-                    layer = null;
-                }
-                return;
-            }
-            if (!layer) {
-                updateGridLayer(newLabel);
-            }else{
-                layer.update({
-                    data:newLabel,
-                    normalize: { rowOrder: 'south-to-north' },
-                })
-                applyGridControlOptions();
-                applyGridClip();
-            }
-        }, { immediate: true });
+        watch(() => [store.mapRenderData.gridData, store.mapRenderData.colorConfig], () => {
+            updateGridLayer();
+        }, { immediate: true, deep: true });
 
         watch(() => [mapControlStore.gridFillEnabled, mapControlStore.gridValueVisible], () => {
             applyGridControlOptions();
@@ -255,18 +248,18 @@ onUnmounted(() => {
     height: auto !important;
     pointer-events: none;
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 6px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75), 0 0 6px rgba(0, 0, 0, 0.45);
 }
 
 .map-control-station-name {
     color: #e9fbff;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
 }
 
 .map-control-station-value {
-    color: #ffe45c;
-    font-size: 12px;
+    color: #ffbb00;
+    font-size: 14px;
     font-weight: 700;
 }
 

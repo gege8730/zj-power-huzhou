@@ -27,3 +27,7 @@ export function radarList(params: { begintime: string;endtime: string;}) {
 export function getWarn(params: { area: string;}) {
     return get('/api/warningNow', params)
 }
+/**获取色标配置 */
+export function seBiaoByCategory(params: { category: string;}) {
+    return get('/api/seBiaoByCategory', params)
+}

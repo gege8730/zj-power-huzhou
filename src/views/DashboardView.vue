@@ -171,13 +171,15 @@ const initAppData = async () => {
 
 onMounted(async () => {
   await initAppData()
+  await store.loadCurrentColorConfig()
   await fetchData()
 })
 watch(() => [store.currentSelection, store.productMode], async (newLabel) => {
   console.log('当前选择的标签:', newLabel, store.timelineParams);
   initData.value.mapTitle = store.maptitle
+  await store.loadCurrentColorConfig()
   await fetchData()
-}, { immediate: true });
+});
 watch(() => store.maptitle, async (newLabel) => {
   initData.value.mapTitle = newLabel
 }, { immediate: true });

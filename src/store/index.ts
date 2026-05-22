@@ -5,7 +5,10 @@ export type {
   TimelineData, 
   MapRenderData, 
   RefreshState,
-  ProductMode 
+  ProductMode,
+  LegendColorStop,
+  SebiaoConfigItem,
+  MapColorConfig 
 } from './mapStore'
 
 export { useLayerToolbarStore } from './layerToolbarStore'

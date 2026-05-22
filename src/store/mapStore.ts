@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
-import {getDataFile} from '@/api/weather'
+import { getDataFile, seBiaoByCategory } from '@/api/weather'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
@@ -28,6 +28,28 @@ export interface FactorConfig {
   dataUrlTemplate?: string
 }
 
+/** 色标项 */
+export interface LegendColorStop {
+  value: number
+  color: string
+}
+
+/** 色标接口返回的单项配置 */
+export interface SebiaoConfigItem {
+  alias?: string[]
+  unit?: string
+  stops?: LegendColorStop[]
+  [key: string]: any
+}
+
+/** 当前地图和图例统一使用的色标配置 */
+export interface MapColorConfig {
+  fieldName: string
+  unit?: string
+  alias?: string[]
+  stops: LegendColorStop[]
+}
+
 /** 时间轴数据 */
 export interface TimelineData {
   /** 时间标签列表 */
@@ -45,7 +67,7 @@ export interface MapRenderData {
   /** 边界数据 */
   boundaryData: any | null
   /** 颜色配置 */
-  colorConfig: any | null
+  colorConfig: MapColorConfig | null
   /** 是否加载中 */
   loading: boolean
   /** 最后更新时间 */
@@ -219,6 +241,12 @@ export const useMapStore = defineStore('map', () => {
   /** 要素文件内容缓存 */
   const dataCache = ref<Record<string, any>>({})
 
+  /** 色标原始数据缓存：接口按 category 获取，切换子要素时再按 alias 匹配 */
+  const colorConfigCache = ref<Record<string, SebiaoConfigItem[]>>({})
+
+  /** 当前网格 ele，用于匹配色标 alias */
+  const currentGridEle = computed(() => currentFactor.value.ele[currentOptionIndex.value] || '')
+
   // ==================== 刷新状态 ====================
   /** 刷新状态 */
   const refreshState = ref<RefreshState>({
@@ -238,6 +266,7 @@ export const useMapStore = defineStore('map', () => {
     }
     if (factorIndex < 0) factorIndex = 0
     currentSelection.value = `${factorIndex}-${optionIndex}`
+    mapRenderData.value.colorConfig = null
     console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
   }
 
@@ -251,6 +280,7 @@ export const useMapStore = defineStore('map', () => {
     currentSelection.value = '0-0'
     setTimelineLabels([])
     mapRenderData.value.gridData = null
+    mapRenderData.value.colorConfig = null
     mapRenderData.value.error = null
     clearCache()
   }
@@ -388,8 +418,38 @@ export const useMapStore = defineStore('map', () => {
   /**
    * 设置颜色配置
    */
-  function setColorConfig(config: any) {
+  function setColorConfig(config: MapColorConfig | null) {
     mapRenderData.value.colorConfig = config
+  }
+
+  /**
+   * 根据当前要素从接口获取色标，并按当前 ele 匹配 alias。
+   * 若没有 alias 匹配项，则使用该 category 返回的第一条色标。
+   */
+  async function loadCurrentColorConfig() {
+    const category = currentFactor.value.type
+    if (!category || !currentGridEle.value) {
+      setColorConfig(null)
+      return null
+    }
+
+    try {
+      let list = colorConfigCache.value[category]
+      if (!list) {
+        const response = await seBiaoByCategory({ category })
+        list = normalizeSebiaoList(response.DS)
+        colorConfigCache.value[category] = list
+      }
+
+      const matched = pickSebiaoConfig(list, currentGridEle.value)
+      const config = buildMapColorConfig(matched, currentGridEle.value)
+      setColorConfig(config)
+      return config
+    } catch (error) {
+      console.error('色标配置加载失败:', error)
+      setColorConfig(null)
+      return null
+    }
   }
 
   /**
@@ -437,6 +497,7 @@ export const useMapStore = defineStore('map', () => {
     currentFactor,
     currentOptionIndex,
     currentOption,
+    currentGridEle,
     timelineParams,
     stationTimelineParams,
     timeline,
@@ -444,6 +505,7 @@ export const useMapStore = defineStore('map', () => {
     mapRenderData,
     refreshState,
     dataCache,
+    colorConfigCache,
     maptitle,
 
     // Actions
@@ -455,12 +517,59 @@ export const useMapStore = defineStore('map', () => {
     setAutoRefresh,
     setBoundaryData,
     setColorConfig,
+    loadCurrentColorConfig,
     clearCache,
     clearError,
     initTimeline,
     setNewFactorOption,
   }
 })
+
+function normalizeSebiaoList(source: unknown): SebiaoConfigItem[] {
+  const list = Array.isArray(source) ? source : []
+  return list
+    .map((item: any) => ({
+      ...item,
+      alias: Array.isArray(item?.alias) ? item.alias.map((alias: unknown) => String(alias)) : [],
+      unit: item?.unit ? String(item.unit) : '',
+      stops: normalizeColorStops(item?.stops),
+    }))
+    .filter((item) => item.stops.length > 0)
+}
+
+function normalizeColorStops(source: unknown): LegendColorStop[] {
+  if (!Array.isArray(source)) return []
+
+  return source
+    .map((item: any) => ({
+      value: Number(item?.value),
+      color: String(item?.color || ''),
+    }))
+    .filter((item) => Number.isFinite(item.value) && Boolean(item.color))
+    .sort((a, b) => a.value - b.value)
+}
+
+function pickSebiaoConfig(list: SebiaoConfigItem[], ele: string) {
+  if (!list.length) return null
+  const target = normalizeAlias(ele)
+  const matched = list.find((item) => (item.alias || []).some((alias) => normalizeAlias(alias) === target))
+  return matched || list[0]
+}
+
+function buildMapColorConfig(item: SebiaoConfigItem | null, ele: string): MapColorConfig | null {
+  if (!item?.stops?.length) return null
+
+  return {
+    fieldName: ele || item.alias?.[0] || 'value',
+    unit: item.unit || '',
+    alias: item.alias || [],
+    stops: item.stops,
+  }
+}
+
+function normalizeAlias(value: string) {
+  return String(value || '').trim().toUpperCase()
+}
 
 function getForecastTimeRange(time: Dayjs, duration: string) {
   const start = getForecastStartTime(time, duration)

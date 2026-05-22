@@ -77,7 +77,7 @@ export const useWarningStore = defineStore('warning', () => {
     return pages
   })
 
-  async function loadWarnings(area = '湖州') {
+  async function loadWarnings(area = '湖州,安吉,德清,长兴') {
     loading.value = true
     try {
       const res = await getWarn({ area })
