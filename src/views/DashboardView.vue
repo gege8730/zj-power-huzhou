@@ -138,13 +138,6 @@ const initAppData = async () => {
     } else {
       console.warn('获取15天预报失败:', (forecastRes as PromiseRejectedResult).reason)
     }
-
-    // 当前预警
-    // if (warnRes.status === 'fulfilled' && warnRes.value?.DS) {
-    //   initData.value.warning = warnRes.value.DS
-    // } else {
-    //   console.warn('获取预警信息失败:', (warnRes as PromiseRejectedResult).reason)
-    // }
   } catch (e) {
     console.error('初始化应用数据失败:', e)
   }

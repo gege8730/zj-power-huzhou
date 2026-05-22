@@ -23,7 +23,7 @@ export function dayForecast(params: { lat: string;lon: string;}) {
 export function radarList(params: { begintime: string;endtime: string;}) {
     return get('/api/radarList', params)
 }
-/**获取当前预警 */
+/**获取当前气象预警 */
 export function getWarn(params: { area: string;}) {
     return get('/api/warningNow', params)
 }
