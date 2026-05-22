@@ -35,15 +35,19 @@ const props = defineProps<{
 const timelinelist = computed(() => props.timeline.map(item => {
   const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
   const date = dayjs(item.dateTime)
-  let time,day
-  if (duration == 'D') {
+  let time, day
+
+  if (duration == 'D' || duration == '24H') {
     time = `${date.format('D日')}`
-    day = `${date.format('M月D日')}`
-  } else if (duration == 'H')  {
+    day = `${date.format('M月D日HH时')}`
+  } else if (duration == 'H' || duration == '3H' || duration == '6H' || duration == '12H') {
     time = `${date.hour()}时`
     day = `${date.format('M月D日HH时')}`
+  } else {
+    time = `${date.format('HH:mm')}`
+    day = `${date.format('M月D日HH:mm')}`
   }
-  return {time, day}
+  return { time, day }
 }))
 const scrollbarRef = ref()
 

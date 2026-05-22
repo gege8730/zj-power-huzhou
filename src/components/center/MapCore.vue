@@ -213,8 +213,10 @@ onMounted(async () => {
             store.timeline.currentLabel?.dateTime,
             store.timeline.currentLabel?.filePath,
             store.currentSelection,
+            store.productMode,
             mapControlStore.autoStationEnabled,
         ], () => {
+            mapControlStore.refreshStationLayerVisible();
             if (mapControlStore.autoStationEnabled) {
                 mapControlStore.loadStationDataByCurrentTime();
             }

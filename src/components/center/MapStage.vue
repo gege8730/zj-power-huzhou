@@ -4,14 +4,15 @@
     <div class="weather-icons">
     </div>
 
+    <WeatherWarningNotice />
     <MapControlGroup :groups="layerGroups" />
     <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
     <MapCore class="map-canvas" />
     <TemperatureLegend />
 
     <div class="map-bottom-tabs">
-      <button class="mini-tab active" type="button">☀ 实况</button>
-      <button class="mini-tab" type="button">☁ 预报</button>
+      <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">☀ 实况</button>
+      <button class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">☁ 预报</button>
       <!-- <div class="datepicker-wrapper">
         <el-date-picker
           v-model="baseTimeModel"
@@ -37,6 +38,7 @@ import MapControlGroup from './MapControlGroup.vue'
 import TemperatureLegend from './TemperatureLegend.vue'
 import MapCore from './MapCore.vue'
 import TimeAxis from './TimeAxis.vue'
+import WeatherWarningNotice from './WeatherWarningNotice.vue'
 import { useMapStore } from '@/store'
 
 const store = useMapStore()

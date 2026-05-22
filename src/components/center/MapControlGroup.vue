@@ -1,22 +1,28 @@
 <template>
   <div class="control-groups">
-    <section v-for="group in controlStore.groups" :key="group.key" class="control-panel neon-border">
+    <section
+      v-for="group in controlStore.groups"
+      :key="group.key"
+      class="control-panel neon-border"
+      :class="{ collapsed: !controlStore.shouldShowItems(group.key), disabled: controlStore.isGroupDisabled(group.key) }"
+    >
       <header>
         <span>{{ group.title }}</span>
         <span
           v-if="group.switchable"
           class="switch"
-          :class="{ on: group.enabled }"
+          :class="{ on: controlStore.isGroupEnabled(group.key), disabled: controlStore.isGroupDisabled(group.key) }"
           @click="controlStore.toggleGroup(group.key)"
         >
           <i />
         </span>
       </header>
-      <div class="check-grid">
+      <div v-show="controlStore.shouldShowItems(group.key)" class="check-grid">
         <label
           v-for="item in group.items"
           :key="`${group.key}-${item.key}`"
           class="check-item"
+          :class="{ disabled: !controlStore.isGroupEnabled(group.key) }"
           @click="controlStore.toggleItem(item.key)"
         >
           <span class="checkbox" :class="{ checked: item.checked }"></span>
@@ -60,6 +66,8 @@ watch(() => props.groups, (groups) => {
 }
 
 .control-panel {
+  overflow: hidden;
+  transition: padding 0.18s ease, opacity 0.18s ease;
   padding: clamp(0.45rem, 0.85vh, 0.55rem) 0.65rem clamp(0.5rem, 0.9vh, 0.65rem);
   background: rgba(0, 57, 103, .9);
   border-top-left-radius: .37037037vh;
@@ -71,6 +79,14 @@ watch(() => props.groups, (groups) => {
   border-style: solid;
   border-color: #336ec799;
   box-shadow: inset 1px 0 #67a3ff;
+}
+
+.control-panel.collapsed {
+  padding-bottom: clamp(0.45rem, 0.85vh, 0.55rem);
+}
+
+.control-panel.disabled {
+  opacity: 0.66;
 }
 
 header {
@@ -92,6 +108,10 @@ header {
   background: rgba(35, 95, 164, 0.9);
   cursor: pointer;
   transition: background 0.18s ease;
+}
+
+.switch.disabled {
+  cursor: not-allowed;
 }
 
 .switch i {
@@ -133,6 +153,11 @@ header {
 
 .check-item:hover {
   color: #fff9c7;
+}
+
+.check-item.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .special-layout {

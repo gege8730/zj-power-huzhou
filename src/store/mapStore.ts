@@ -1,10 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
+import type { Dayjs } from 'dayjs'
 import {getDataFile} from '@/api/weather'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
+
+/** 产品模式 */
+export type ProductMode = 'live' | 'forecast'
 
 /** 要素配置 */
 export interface FactorConfig {
@@ -62,19 +66,43 @@ export interface RefreshState {
   refreshCount: number
 }
 
+const LIVE_FACTORS: FactorConfig[] = [
+  { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['10MIN_T', 'TH24', 'TL24'], stationEle: ['T1', 'TH24', 'TL24_'], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
+  { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['R', 'R3', 'R6', 'R12', 'R24'], stationEle: ['R1', 'R3', 'R6', 'R12', 'R24'], eleDuration: ['H', 'H', 'H', 'H', 'H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
+  { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], ele: ['EXMAXWINDV', '', 'FEXMAX24'], stationEle: ['WSIM1', '', ''], eleDuration: ['H', 'H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
+  { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], stationEle: ['VIS1', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
+  { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', 'H', 'D'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
+  { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
+  { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
+  { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+]
+
+const FORECAST_FACTORS: FactorConfig[] = [
+  { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['T', 'TMax24', 'TMin24'], stationEle: ['', '', ''], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
+  { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['Pr01', 'Pr03', 'Pr06', 'Pr12', 'Pr24'], stationEle: ['', '', '', '', ''], eleDuration: ['H', '3H', '6H', '12H', '24H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
+  { type: 'wind', name: '风', options: ['1h', '12h', '24h'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', '12H', '24H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
+  { type: 'visibility', name: '能见度', options: ['3h'], ele: ['Vis3'], stationEle: [''], eleDuration: ['3H'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
+  { type: 'humidity', name: '相对湿度', options: ['1h'], ele: ['Rh'], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
+  { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
+]
+
+function cloneFactors(factors: FactorConfig[]) {
+  return factors.map((item) => ({
+    ...item,
+    options: [...item.options],
+    ele: [...item.ele],
+    stationEle: [...item.stationEle],
+    eleDuration: [...item.eleDuration],
+  }))
+}
+
 export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
+  /** 产品模式：实况 / 预报 */
+  const productMode = ref<ProductMode>('live')
+
   /** 要素配置列表 */
-  const factors = ref<FactorConfig[]>([
-    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['10MIN_T', 'TH24', 'TL24'], stationEle: ['T1', 'TH24', 'TL24_'], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
-    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['R', 'R3', 'R6', 'R12', 'R24'], stationEle: ['R1', 'R3', 'R6', 'R12', 'R24'], eleDuration: ['H', 'H', 'H', 'H', 'H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
-    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], ele: ['EXMAXWINDV', '', 'FEXMAX24'], stationEle: ['WSIM1', '', ''], eleDuration: ['H', 'H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
-    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], stationEle: ['VIS1', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
-    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', 'H', 'D'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-    { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
-    { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
-    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
-  ])
+  const factors = ref<FactorConfig[]>(cloneFactors(LIVE_FACTORS))
 
   /** 当前选中的主要素类型 */
   const currentFactorType = ref<FactorType>('temperature')
@@ -82,16 +110,19 @@ export const useMapStore = defineStore('map', () => {
   /** 当前选中索引（如 '0-0' 表示第1个要素的第1个选项） */
   const currentSelection = ref('0-0')
 
+  /** 是否预报模式 */
+  const isForecastMode = computed(() => productMode.value === 'forecast')
+
   /** 当前选中要素配置 */
   const currentFactor = computed(() => {
     const [factorIndex] = currentSelection.value.split('-').map(Number)
-    return factors.value[factorIndex]
+    return factors.value[factorIndex] || factors.value[0]
   })
 
   /** 当前选中选项索引（数组下标） */
   const currentOptionIndex = computed(() => {
     const [, optionIndex] = currentSelection.value.split('-').map(Number)
-    return optionIndex
+    return Number.isFinite(optionIndex) ? optionIndex : 0
   })
 
   /** 当前选中的选项文本 */
@@ -104,8 +135,19 @@ export const useMapStore = defineStore('map', () => {
   /** 时间轴请求参数 */
   const baseTime = ref(dayjs())
   const timelineParams = computed(() => {
-    const ele = currentFactor.value.ele[currentOptionIndex.value]
-    const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
+    const ele = currentFactor.value.ele[currentOptionIndex.value] || ''
+    const duration = currentFactor.value.eleDuration[currentOptionIndex.value] || 'H'
+
+    if (isForecastMode.value) {
+      const timeRange = getForecastTimeRange(baseTime.value, duration)
+      return {
+        ncType: 'RULER',
+        ele,
+        startTime: timeRange.startTime,
+        endTime: timeRange.endTime,
+      }
+    }
+
     const startTime = () => {
       if (duration == 'H') return baseTime.value.subtract(24, 'hour').format('YYYYMMDDHH0000')
       else if (duration == 'D') return baseTime.value.subtract(30, 'day').format('YYYYMMDDHH0000')
@@ -134,7 +176,7 @@ export const useMapStore = defineStore('map', () => {
   const stationTimelineParams = computed(() => ({
     ...timelineParams.value,
     ncType: 'DATAHOUSE',
-    ele: currentFactor.value.stationEle[currentOptionIndex.value] || '',
+    ele: isForecastMode.value ? '' : (currentFactor.value.stationEle[currentOptionIndex.value] || ''),
   }))
   /** 时间轴数据 */
   const timeline = ref<TimelineData>({
@@ -155,9 +197,15 @@ export const useMapStore = defineStore('map', () => {
   // 地图标题
   const maptitle = computed (() => {
     if(timelineParams.value.ele == '') return '要素数据开发中...'
+    const time = dayjs(timeline.value.currentLabel.dateTime)
+    if (!time.isValid()) return ''
+
+    if (isForecastMode.value) {
+      return getForecastMapTitle(time)
+    }
+
     const factor = `${currentOption.value.replace('h','小时')}${currentFactor.value.name}分布图`
     const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
-    let time = dayjs(timeline.value.currentLabel.dateTime)
     let map_time
     if(duration == 'H'){
       map_time = time.format('YYYY年MM月DD日HH时')
@@ -188,9 +236,25 @@ export const useMapStore = defineStore('map', () => {
       currentFactorType.value = type
       factorIndex = factors.value.findIndex(f => f.type === type)
     }
+    if (factorIndex < 0) factorIndex = 0
     currentSelection.value = `${factorIndex}-${optionIndex}`
     console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
   }
+
+  /** 设置产品模式 */
+  function setProductMode(mode: ProductMode) {
+    if (productMode.value === mode) return
+
+    productMode.value = mode
+    factors.value = cloneFactors(mode === 'forecast' ? FORECAST_FACTORS : LIVE_FACTORS)
+    currentFactorType.value = factors.value[0]?.type || 'temperature'
+    currentSelection.value = '0-0'
+    setTimelineLabels([])
+    mapRenderData.value.gridData = null
+    mapRenderData.value.error = null
+    clearCache()
+  }
+
   /**
    * 设置当前时间索引
    */
@@ -210,7 +274,7 @@ export const useMapStore = defineStore('map', () => {
     timeline.value.labels = labels
     const lastIndex = labels.length - 1
     timeline.value.currentIndex = lastIndex >= 0 ? lastIndex : 0
-    timeline.value.currentLabel = labels[lastIndex] || labels[0] || ''
+    timeline.value.currentLabel = labels[lastIndex] || labels[0] || { dateTime: '', filePath: '' }
   }
 
   /**
@@ -224,8 +288,12 @@ export const useMapStore = defineStore('map', () => {
       mapRenderData.value.gridData = null
       return
     }
+    if (!currentTimeFile) {
+      mapRenderData.value.gridData = null
+      return
+    }
     // 构建缓存key
-    const cacheKey = `${factor.type}_${currentOption.value}_${currentTimeFile}`
+    const cacheKey = `${productMode.value}_${factor.type}_${currentOption.value}_${currentTimeFile}`
 
     // 检查缓存
     if (dataCache.value[cacheKey]) {
@@ -341,9 +409,22 @@ export const useMapStore = defineStore('map', () => {
     await refreshMapData()
   }
 
+  function getForecastMapTitle(selectedTime: Dayjs) {
+    const start = getForecastStartTime(baseTime.value, currentFactor.value.eleDuration[currentOptionIndex.value] || 'H')
+    const durationHours = getDurationHours(currentFactor.value.eleDuration[currentOptionIndex.value] || 'H')
+    const end = selectedTime
+    const startText = start.format('YYYY年MM月DD日HH时')
+    const endText = end.format('DD日HH时')
+    const durationText = durationHours > 1 ? `${durationHours}小时` : ''
+    const factorName = `${durationText}${currentFactor.value.name}预报图`
+    return `${startText}-${endText} ${factorName}`
+  }
+
   return {
     // 状态
     factors,
+    productMode,
+    isForecastMode,
     currentFactorType,
     currentSelection,
     currentFactor,
@@ -359,6 +440,7 @@ export const useMapStore = defineStore('map', () => {
     maptitle,
 
     // Actions
+    setProductMode,
     setTimelineIndex,
     setTimelineLabels,
     refreshMapData,
@@ -372,3 +454,33 @@ export const useMapStore = defineStore('map', () => {
     setNewFactorOption,
   }
 })
+
+function getForecastTimeRange(time: Dayjs, duration: string) {
+  const start = getForecastStartTime(time, duration)
+  const durationHours = getDurationHours(duration)
+  const end = duration === 'D' || duration === '24H'
+    ? start.add(23, 'day')
+    : start.add(durationHours * 23, 'hour')
+
+  return {
+    startTime: start.format('YYYYMMDDHH0000'),
+    endTime: end.format('YYYYMMDDHH0000'),
+  }
+}
+
+function getForecastStartTime(time: Dayjs, duration: string) {
+  if (duration === 'H') return time.startOf('hour')
+  if (duration === 'D' || duration === '24H') return time.startOf('hour')
+
+  // 预报产品按最近完成的 3 小时时段作为起报时间：0-2、3-5、6-8...
+  // 例如当前 15 时，最近完成时段为 12-14，起报时间取 14 时。
+  const completedCycleEnd = time.subtract(1, 'hour')
+  const cycleEndHour = Math.floor(completedCycleEnd.hour() / 3) * 3 + 2
+  return completedCycleEnd.hour(cycleEndHour).minute(0).second(0).millisecond(0)
+}
+
+function getDurationHours(duration: string) {
+  if (duration === 'D' || duration === '24H') return 24
+  if (duration.endsWith('H')) return Number(duration.replace('H', '')) || 1
+  return 1
+}

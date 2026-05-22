@@ -167,7 +167,8 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
   let townBoundaryLayer: Layer | null = null
   let townNameLayer: LayerGroup | null = null
 
-  const autoStationEnabled = computed(() => getGroup('autoStation')?.enabled ?? true)
+  const autoStationDisabled = computed(() => useMapStore().isForecastMode)
+  const autoStationEnabled = computed(() => !autoStationDisabled.value && (getGroup('autoStation')?.enabled ?? true))
   const stationNameVisible = computed(() => getItem('stationName')?.checked ?? true)
   const stationValueVisible = computed(() => getItem('stationValue')?.checked ?? true)
   const gridFillEnabled = computed(() => getGroup('fill')?.enabled ?? true)
@@ -233,7 +234,7 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
 
   function toggleGroup(key: MapControlGroupKey) {
     const group = getGroup(key)
-    if (!group || !group.switchable) return
+    if (!group || !group.switchable || isGroupDisabled(key)) return
 
     group.enabled = !group.enabled
 
@@ -246,7 +247,8 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
 
   function toggleItem(key: MapControlItemKey) {
     const item = getItem(key)
-    if (!item) return
+    const group = getGroupByItemKey(key)
+    if (!item || (group && (!isGroupEnabled(group.key) || isGroupDisabled(group.key)))) return
 
     item.checked = !item.checked
 
@@ -543,6 +545,22 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
     toggleLeafletLayer(townNameLayer, townNameVisible.value)
   }
 
+  function isGroupDisabled(key: MapControlGroupKey) {
+    return key === 'autoStation' && autoStationDisabled.value
+  }
+
+  function isGroupEnabled(key: MapControlGroupKey) {
+    if (isGroupDisabled(key)) return false
+    return getGroup(key)?.enabled ?? true
+  }
+
+  function shouldShowItems(key: MapControlGroupKey) {
+    const group = getGroup(key)
+    if (!group) return false
+    if (!group.switchable) return true
+    return isGroupEnabled(key)
+  }
+
   function removeAllControlLayers() {
     removeStationLayers()
     removeCountyLayers()
@@ -610,6 +628,10 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
     return null
   }
 
+  function getGroupByItemKey(key: MapControlItemKey) {
+    return groups.value.find((group) => group.items.some((item) => item.key === key))
+  }
+
   function getGroup(key: MapControlGroupKey) {
     return groups.value.find((group) => group.key === key)
   }
@@ -625,6 +647,7 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
     stationLoading,
     countyLoading,
     townLoading,
+    autoStationDisabled,
     autoStationEnabled,
     stationNameVisible,
     stationValueVisible,
@@ -639,6 +662,9 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
     setMap,
     toggleGroup,
     toggleItem,
+    isGroupDisabled,
+    isGroupEnabled,
+    shouldShowItems,
     loadStationTimeline,
     loadStationDataByCurrentTime,
     loadCountyResources,
