@@ -17,7 +17,7 @@ import {
     DEFAULT_GRID_FIELD_FILL_OPTIONS,
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
-import type { ColorScaleJson, ZJQXGridFieldLayerOptions, ClipGeometryInput } from '@zjqx/gridfield';
+import type { ColorScaleJson, WeatherGridJson, ClipGeometryInput } from '@zjqx/gridfield';
 import { useLayerToolbarStore, useMapControlGroupStore, useMapStore } from '@/store'
 
 const store = useMapStore()
@@ -101,13 +101,13 @@ onMounted(async () => {
             },
             border: {
                 ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
-                enabled:false,
+                enabled: mapControlStore.gridFillEnabled,
                 color: '#fff',
                 width: 2,
             },
             labels: {
                 ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
-                enabled: mapControlStore.gridValueVisible,
+                enabled: mapControlStore.gridFillEnabled && mapControlStore.gridValueVisible,
                 color: '#000',
                 fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
                 fontWeight: 500,
@@ -169,7 +169,7 @@ onMounted(async () => {
                     clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
                     ...getGridControlOptions(),
                     popup: false,
-                } as ZJQXGridFieldLayerOptions);
+                });
                 zjqxMap!.addZJQXLayer(layer);
                 applyGridClip();
             }

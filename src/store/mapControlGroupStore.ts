@@ -171,7 +171,7 @@ export const useMapControlGroupStore = defineStore('mapControlGroup', () => {
   const stationNameVisible = computed(() => getItem('stationName')?.checked ?? true)
   const stationValueVisible = computed(() => getItem('stationValue')?.checked ?? true)
   const gridFillEnabled = computed(() => getGroup('fill')?.enabled ?? true)
-  const gridValueVisible = computed(() => getItem('fillValue')?.checked ?? true)
+  const gridValueVisible = computed(() => gridFillEnabled.value && (getItem('fillValue')?.checked ?? true))
   const countyBoundaryVisible = computed(() => getItem('countyBoundary')?.checked ?? true)
   const countyNameVisible = computed(() => getItem('countyName')?.checked ?? false)
   const townBoundaryVisible = computed(() => getItem('townBoundary')?.checked ?? false)
