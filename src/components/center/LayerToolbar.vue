@@ -18,26 +18,29 @@
 
   <div v-if="layerStore.isRadarActive && layerStore.radarImages.length" class="radar-time-switch">
     <button
-      class="time-arrow"
-      type="button"
-      :disabled="layerStore.radarIndex <= 0"
-      @click="layerStore.prevRadar"
-    >
-      ‹
-    </button>
-    <span class="time-label">{{ layerStore.currentRadarLabel }}</span>
-    <button
-      class="time-arrow"
-      type="button"
-      :disabled="layerStore.radarIndex >= layerStore.radarImages.length - 1"
-      @click="layerStore.nextRadar"
-    >
-      ›
-    </button>
+        class="time-arrow"
+        type="button"
+        :disabled="layerStore.radarIndex <= 0"
+        @click="layerStore.prevRadar"
+      >
+        <ArrowLeftBold />
+      </button>
+      <span class="time-label">{{ beijingTimeLabel }}</span>
+      <button
+        class="time-arrow"
+        type="button"
+        :disabled="layerStore.radarIndex >= layerStore.radarImages.length - 1"
+        @click="layerStore.nextRadar"
+      >
+        <ArrowRightBold />
+      </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
+import dayjs from 'dayjs'
 import { useLayerToolbarStore } from '@/store'
 
 defineProps<{
@@ -47,6 +50,16 @@ defineProps<{
 }>()
 
 const layerStore = useLayerToolbarStore()
+
+const beijingTimeLabel = computed(() => {
+  const utcLabel = layerStore.currentRadarLabel
+  if (!utcLabel) return ''
+  const match = utcLabel.match(/(\d{2})日(\d{2})时(\d{2})分雷达/)
+  if (!match) return utcLabel
+  const [, day, hour, minute] = match
+  const beijingTime = dayjs().date(parseInt(day)).hour(parseInt(hour)).minute(parseInt(minute)).add(8, 'hour')
+  return `${beijingTime.format('DD日HH时mm分')}雷达`
+})
 </script>
 
 <style scoped>
@@ -112,8 +125,8 @@ const layerStore = useLayerToolbarStore()
 
 .radar-time-switch {
   position: absolute;
-  right: clamp(7rem, 13vw, 13.5rem);
-  top: clamp(3.4rem, 7.5vh, 5.1rem);
+  right: 0;
+  top: clamp(2.7rem, 4.7vh, 5.1rem);
   min-width: clamp(10.6rem, 12vw, 14rem);
   height: clamp(2rem, 3vh, 2.35rem);
   display: flex;
@@ -121,30 +134,31 @@ const layerStore = useLayerToolbarStore()
   justify-content: center;
   gap: clamp(0.45rem, 0.6vw, 0.65rem);
   padding: 0 clamp(0.55rem, 0.8vw, 0.85rem);
-  background: linear-gradient(90deg, rgba(0, 92, 98, 0.24), rgba(0, 163, 138, 0.92), rgba(0, 92, 98, 0.24));
-  border: 1px solid rgba(69, 255, 225, 0.32);
+  background: linear-gradient(90deg, rgba(0, 57, 103, 0.24), rgba(12, 120, 212, 0.92), rgba(0, 57, 103, 0.24));
+  border: 1px solid rgba(49, 200, 255, 0.32);
   box-shadow:
-    inset 0 0 0.75rem rgba(68, 255, 223, 0.22),
-    0 0 1rem rgba(0, 255, 224, 0.26);
-  color: #f4ffff;
+    inset 0 0 0.75rem rgba(49, 200, 255, 0.22),
+    0 0 1rem rgba(12, 120, 212, 0.26);
+  color: #dff8ff;
   font-size: clamp(0.82rem, 0.88vw, 1.08rem);
-  font-weight: 800;
-  text-shadow: 0 0 0.45rem rgba(0, 255, 220, 0.72);
+  font-weight: 500;
+  text-shadow: 0 0 0.45rem rgba(49, 200, 255, 0.72);
   white-space: nowrap;
   z-index: 8;
 }
 
 .time-arrow {
-  width: clamp(1.05rem, 1.2vw, 1.35rem);
-  height: clamp(1.35rem, 1.8vh, 1.7rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(1.4rem, 1.6vw, 1.7rem);
+  height: 100%;
   border: 0;
   background: transparent;
-  color: #78fff4;
-  font-size: clamp(1.55rem, 1.4vw, 1.9rem);
-  line-height: 1;
+  color: #fff;
+  font-size: clamp(1.5rem, 1.6vw, 1.8rem);
   cursor: pointer;
-  font-family: inherit;
-  text-shadow: 0 0 0.45rem rgba(0, 255, 220, 0.9);
+  text-shadow: 0 0 0.3rem rgba(255, 255, 255, 0.8);
 }
 
 .time-arrow:disabled {
