@@ -4,23 +4,49 @@
       {{ queryPlaceholder }}
       <span class="search-icon">⌕</span>
     </button> -->
-    <div
+    <button
       v-for="item in items"
       :key="item"
       class="tool-item"
-      :class="{ active: item === active }"
+      :class="{ active: layerStore.resolveToolbarKey(item) === layerStore.activeKey }"
+      type="button"
+      @click="layerStore.handleToolbarClick(item)"
     >
       {{ item }}
-    </div>
+    </button>
+  </div>
+
+  <div v-if="layerStore.isRadarActive && layerStore.radarImages.length" class="radar-time-switch">
+    <button
+      class="time-arrow"
+      type="button"
+      :disabled="layerStore.radarIndex <= 0"
+      @click="layerStore.prevRadar"
+    >
+      ‹
+    </button>
+    <span class="time-label">{{ layerStore.currentRadarLabel }}</span>
+    <button
+      class="time-arrow"
+      type="button"
+      :disabled="layerStore.radarIndex >= layerStore.radarImages.length - 1"
+      @click="layerStore.nextRadar"
+    >
+      ›
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useLayerToolbarStore } from '@/store'
+
 defineProps<{
   items: string[]
   active: string
   queryPlaceholder: string
 }>()
+
+const layerStore = useLayerToolbarStore()
 </script>
 
 <style scoped>
@@ -37,6 +63,8 @@ defineProps<{
 
 .tool-item {
   height: clamp(2.65rem, 4.6vh, 3.4rem);
+  width: 100%;
+  border: 0;
   color: #e7f8ff;
   font-size: clamp(0.9rem, 0.95vw, 1.15rem);
   font-weight: 500;
@@ -46,9 +74,19 @@ defineProps<{
   background-size: 100% 100%;
   cursor: pointer;
   position: relative;
-  padding-left: 30%;
+  padding: 0 0 0 30%;
   display: flex;
   align-items: center;
+  font-family: inherit;
+}
+
+.tool-item:hover {
+  color: #fff9c7;
+}
+
+.tool-item:focus-visible {
+  outline: 1px solid rgba(255, 227, 62, 0.8);
+  outline-offset: -0.2rem;
 }
 
 .query {
@@ -70,5 +108,53 @@ defineProps<{
   color: #ffc700;
   background-repeat: no-repeat;
   background-size: 100% 100%;
+}
+
+.radar-time-switch {
+  position: absolute;
+  right: clamp(7rem, 13vw, 13.5rem);
+  top: clamp(3.4rem, 7.5vh, 5.1rem);
+  min-width: clamp(10.6rem, 12vw, 14rem);
+  height: clamp(2rem, 3vh, 2.35rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.45rem, 0.6vw, 0.65rem);
+  padding: 0 clamp(0.55rem, 0.8vw, 0.85rem);
+  background: linear-gradient(90deg, rgba(0, 92, 98, 0.24), rgba(0, 163, 138, 0.92), rgba(0, 92, 98, 0.24));
+  border: 1px solid rgba(69, 255, 225, 0.32);
+  box-shadow:
+    inset 0 0 0.75rem rgba(68, 255, 223, 0.22),
+    0 0 1rem rgba(0, 255, 224, 0.26);
+  color: #f4ffff;
+  font-size: clamp(0.82rem, 0.88vw, 1.08rem);
+  font-weight: 800;
+  text-shadow: 0 0 0.45rem rgba(0, 255, 220, 0.72);
+  white-space: nowrap;
+  z-index: 8;
+}
+
+.time-arrow {
+  width: clamp(1.05rem, 1.2vw, 1.35rem);
+  height: clamp(1.35rem, 1.8vh, 1.7rem);
+  border: 0;
+  background: transparent;
+  color: #78fff4;
+  font-size: clamp(1.55rem, 1.4vw, 1.9rem);
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  text-shadow: 0 0 0.45rem rgba(0, 255, 220, 0.9);
+}
+
+.time-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.time-label {
+  flex: 1;
+  text-align: center;
+  letter-spacing: 0.03em;
 }
 </style>

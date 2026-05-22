@@ -18,9 +18,10 @@ import {
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
 import type { ColorScaleJson, WeatherGridJson, ClipGeometryInput } from '@zjqx/gridfield';
-import { useMapStore } from '@/store'
+import { useLayerToolbarStore, useMapStore } from '@/store'
 
 const store = useMapStore()
+const layerToolbarStore = useLayerToolbarStore()
 const colorConfig: ColorScaleJson = {
     fieldName: 'temp',
     stops: [
@@ -75,6 +76,7 @@ onMounted(async () => {
                 },
             },
         });
+        layerToolbarStore.setMap(zjqxMap as any);
 
         // 先加载 geojson
         const adminBoundary = await fetch('/sample/huz.geojson')
@@ -155,6 +157,8 @@ onMounted(async () => {
 
 // 组件卸载时清理地图实例，防止内存泄漏
 onUnmounted(() => {
+    layerToolbarStore.clearActiveLayer();
+    layerToolbarStore.setMap(null);
     if (zjqxMap) {
         zjqxMap.remove();
         zjqxMap = null;
