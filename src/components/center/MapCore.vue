@@ -17,11 +17,12 @@ import {
     DEFAULT_GRID_FIELD_FILL_OPTIONS,
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
-import type { ColorScaleJson, WeatherGridJson, ClipGeometryInput } from '@zjqx/gridfield';
-import { useLayerToolbarStore, useMapStore } from '@/store'
+import type { ColorScaleJson, ZJQXGridFieldLayerOptions, ClipGeometryInput } from '@zjqx/gridfield';
+import { useLayerToolbarStore, useMapControlGroupStore, useMapStore } from '@/store'
 
 const store = useMapStore()
 const layerToolbarStore = useLayerToolbarStore()
+const mapControlStore = useMapControlGroupStore()
 const colorConfig: ColorScaleJson = {
     fieldName: 'temp',
     stops: [
@@ -77,6 +78,7 @@ onMounted(async () => {
             },
         });
         layerToolbarStore.setMap(zjqxMap as any);
+        mapControlStore.setMap(zjqxMap as any);
 
         // 先加载 geojson
         const adminBoundary = await fetch('/sample/huz.geojson')
@@ -90,6 +92,66 @@ onMounted(async () => {
 
         let layer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
 
+        const getGridControlOptions = () => ({
+            fill: {
+                ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
+                enabled: mapControlStore.gridFillEnabled,
+                fillType: 2,
+                opacity: mapControlStore.gridFillEnabled ? 1 : 0,
+            },
+            border: {
+                ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
+                enabled:false,
+                color: '#fff',
+                width: 2,
+            },
+            labels: {
+                ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
+                enabled: mapControlStore.gridValueVisible,
+                color: '#000',
+                fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+                fontWeight: 500,
+            },
+        });
+
+        const applyGridControlOptions = () => {
+            if (!layer) return;
+            try {
+                layer.update(getGridControlOptions() as any);
+            } catch (error) {
+                console.warn('更新填色图层显隐失败:', error);
+            }
+        };
+
+        const applyGridClip = () => {
+            if (!layer) return;
+
+            const gridLayer = layer as any;
+            try {
+                if (mapControlStore.mapClipEnabled) {
+                    if (typeof gridLayer.setClipGeometry === 'function') {
+                        gridLayer.setClipGeometry(adminBoundary);
+                    }
+                    if (typeof gridLayer.setClipEnabled === 'function') {
+                        gridLayer.setClipEnabled(true);
+                    } else if (typeof gridLayer.update === 'function') {
+                        gridLayer.update({ clip: { geometry: adminBoundary, enabled: true } });
+                    }
+                    return;
+                }
+
+                if (typeof gridLayer.setClipEnabled === 'function') {
+                    gridLayer.setClipEnabled(false);
+                } else if (typeof gridLayer.clearClip === 'function') {
+                    gridLayer.clearClip();
+                } else if (typeof gridLayer.update === 'function') {
+                    gridLayer.update({ clip: { enabled: false } });
+                }
+            } catch (error) {
+                console.warn('更新地图裁剪状态失败:', error);
+            }
+        };
+
         const updateGridLayer = (gridData: any) => {
             if (!gridData || !zjqxMap) return;
 
@@ -97,33 +159,19 @@ onMounted(async () => {
 
             if (layer) {
                 layer.setData(grid);
+                applyGridControlOptions();
+                applyGridClip();
             } else {
                 layer = new ZJQXGridFieldLayer({
                     data: grid,
                     palette,
                     colorize,
-                    clip: { geometry: adminBoundary },
-                    fill: {
-                        ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
-                        fillType: 2,
-                        opacity: 1,
-                    },
-                    border: {
-                        ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
-                        enabled: true,
-                        color: '#fff',
-                        width: 2,
-                    },
-                    labels: {
-                        ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
-                        enabled: true,
-                        color: '#000',
-                        fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
-                        fontWeight: 500,
-                    },
+                    clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
+                    ...getGridControlOptions(),
                     popup: false,
-                });
+                } as ZJQXGridFieldLayerOptions);
                 zjqxMap!.addZJQXLayer(layer);
+                applyGridClip();
             }
         };
 
@@ -148,6 +196,27 @@ onMounted(async () => {
                     data:newLabel,
                     normalize: { rowOrder: 'south-to-north' },
                 })
+                applyGridControlOptions();
+                applyGridClip();
+            }
+        }, { immediate: true });
+
+        watch(() => [mapControlStore.gridFillEnabled, mapControlStore.gridValueVisible], () => {
+            applyGridControlOptions();
+        }, { immediate: true });
+
+        watch(() => mapControlStore.mapClipEnabled, () => {
+            applyGridClip();
+        }, { immediate: true });
+
+        watch(() => [
+            store.timeline.currentLabel?.dateTime,
+            store.timeline.currentLabel?.filePath,
+            store.currentSelection,
+            mapControlStore.autoStationEnabled,
+        ], () => {
+            if (mapControlStore.autoStationEnabled) {
+                mapControlStore.loadStationDataByCurrentTime();
             }
         }, { immediate: true });
     } catch (error) {
@@ -159,6 +228,8 @@ onMounted(async () => {
 onUnmounted(() => {
     layerToolbarStore.clearActiveLayer();
     layerToolbarStore.setMap(null);
+    mapControlStore.removeAllControlLayers();
+    mapControlStore.setMap(null);
     if (zjqxMap) {
         zjqxMap.remove();
         zjqxMap = null;
@@ -172,6 +243,45 @@ onUnmounted(() => {
     /* filter: grayscale(150%) contrast(10%) brightness(170%) sepia(.1) invert(.85) saturate(200%) !important; */
     /* filter: grayscale(150%) sepia(8%) invert(90%) saturate(100%) !important; */
     /* filter: brightness(0.2) contrast(1.28) saturate(0.42) hue-rotate(200deg) grayscale(0.42) !important; */
+}
+
+.map-control-station-name,
+.map-control-station-value,
+.map-control-county-name,
+.map-control-town-name {
+    width: max-content !important;
+    height: auto !important;
+    pointer-events: none;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 6px rgba(0, 0, 0, 0.45);
+}
+
+.map-control-station-name {
+    color: #e9fbff;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.map-control-station-value {
+    color: #ffe45c;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.map-control-county-name {
+    color: #f7fbff;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.08em;
+}
+
+.map-control-town-name {
+    color: rgba(224, 247, 255, 0.88);
+    font-size: 10px;
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: 0.03em;
 }
 </style>
 

@@ -1,14 +1,24 @@
 <template>
   <div class="control-groups">
-    <section v-for="group in groups" :key="group.title" class="control-panel neon-border">
+    <section v-for="group in controlStore.groups" :key="group.key" class="control-panel neon-border">
       <header>
         <span>{{ group.title }}</span>
-        <span v-if="group.switchable" class="switch" :class="{ on: group.enabled }">
+        <span
+          v-if="group.switchable"
+          class="switch"
+          :class="{ on: group.enabled }"
+          @click="controlStore.toggleGroup(group.key)"
+        >
           <i />
         </span>
       </header>
       <div class="check-grid">
-        <label v-for="(item, index) in group.items" :key="`${group.title}-${item.name}`" class="check-item" >
+        <label
+          v-for="item in group.items"
+          :key="`${group.key}-${item.key}`"
+          class="check-item"
+          @click="controlStore.toggleItem(item.key)"
+        >
           <span class="checkbox" :class="{ checked: item.checked }"></span>
           {{ item.name }}
         </label>
@@ -18,11 +28,23 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
+import { useMapControlGroupStore } from '@/store'
 import type { LayerGroup } from '../../types/dashboard'
 
-defineProps<{
+const props = defineProps<{
   groups: LayerGroup[]
 }>()
+
+const controlStore = useMapControlGroupStore()
+
+onMounted(() => {
+  controlStore.initFromGroups(props.groups)
+})
+
+watch(() => props.groups, (groups) => {
+  controlStore.initFromGroups(groups)
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -68,6 +90,8 @@ header {
   height: 1rem;
   border-radius: 999rem;
   background: rgba(35, 95, 164, 0.9);
+  cursor: pointer;
+  transition: background 0.18s ease;
 }
 
 .switch i {
@@ -78,6 +102,7 @@ header {
   height: 0.75rem;
   border-radius: 50%;
   background: #bfefff;
+  transition: left 0.18s ease;
 }
 
 .switch.on {
@@ -102,6 +127,12 @@ header {
   color: #d8f2ff;
   font-size: clamp(0.68rem, 0.68vw, 0.82rem);
   white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.check-item:hover {
+  color: #fff9c7;
 }
 
 .special-layout {

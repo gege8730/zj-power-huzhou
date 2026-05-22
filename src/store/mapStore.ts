@@ -14,8 +14,10 @@ export interface FactorConfig {
   name: string
   /** 要素选项 */
   options: string[]
-  /** 对应的选项标识（用于生成数据URL） */
+  /** 对应的网格选项标识（用于生成数据URL） */
   ele: string[]
+  /** 对应的自动站选项标识，自动站与网格接口 ele 不完全一致 */
+  stationEle: string[]
   /** 要素选项对应的时间颗粒度 */
   eleDuration: string[]
   /** 数据文件路径模板，如 '/sample/{factor}_{time}.json' */
@@ -64,14 +66,14 @@ export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
   /** 要素配置列表 */
   const factors = ref<FactorConfig[]>([
-    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['10MIN_T', 'TH24', 'TL24'], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
-    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['R', 'R3', 'R6', 'R12', 'R24'], eleDuration: ['H', 'H', 'H', 'H', 'H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
-    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], ele: ['EXMAXWINDV', '', 'FEXMAX24'], eleDuration: ['H', 'H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
-    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
-    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], ele: ['', '', ''], eleDuration: ['H', 'H', 'D'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-    { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
-    { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
-    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+    { type: 'temperature', name: '气温', options: ['整点', '日最高', '日最低'], ele: ['10MIN_T', 'TH24', 'TL24'], stationEle: ['T1', 'TH24', 'TL24_'], eleDuration: ['H', 'D', 'D'], dataUrlTemplate: '/sample/temp_{option}_{time}.json' },
+    { type: 'precipitation', name: '降水', options: ['1h', '3h', '6h', '12h', '24h'], ele: ['R', 'R3', 'R6', 'R12', 'R24'], stationEle: ['R1', 'R3', 'R6', 'R12', 'R24'], eleDuration: ['H', 'H', 'H', 'H', 'H'], dataUrlTemplate: '/sample/rain_{option}_{time}.json' },
+    { type: 'wind', name: '风', options: ['极大风', '平均风', '12h极大风'], ele: ['EXMAXWINDV', '', 'FEXMAX24'], stationEle: ['WSIM1', '', ''], eleDuration: ['H', 'H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
+    { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], stationEle: ['VIS1', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
+    { type: 'humidity', name: '相对湿度', options: ['整点', '平均', '日最小'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', 'H', 'D'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
+    { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
+    { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
+    { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
   ])
 
   /** 当前选中的主要素类型 */
@@ -127,6 +129,13 @@ export const useMapStore = defineStore('map', () => {
       "endTime": params_endTime
     }
   })
+
+  /** 自动站时间轴请求参数：自动站 ncType 固定 DATAHOUSE，ele 与网格接口分开维护 */
+  const stationTimelineParams = computed(() => ({
+    ...timelineParams.value,
+    ncType: 'DATAHOUSE',
+    ele: currentFactor.value.stationEle[currentOptionIndex.value] || '',
+  }))
   /** 时间轴数据 */
   const timeline = ref<TimelineData>({
     labels: [],
@@ -341,6 +350,7 @@ export const useMapStore = defineStore('map', () => {
     currentOptionIndex,
     currentOption,
     timelineParams,
+    stationTimelineParams,
     timeline,
     baseTime,
     mapRenderData,
