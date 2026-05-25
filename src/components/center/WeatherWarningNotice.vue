@@ -124,8 +124,8 @@ function formatTime(time?: string) {
   position: absolute;
   right: 0;
   top: clamp(2.7rem, 4.7vh, 5.1rem);
-  width: clamp(5.6rem, 6.6vw, 7.2rem);
-  height: clamp(2.15rem, 3.2vh, 2.75rem);
+  width: clamp(5.6rem, 6.6vw, 8rem);
+  height: clamp(3rem, 3.2vh, 2.75rem);
   z-index: 8;
   transition: top 0.18s ease;
 }
