@@ -66,6 +66,9 @@ onMounted(async () => {
                 enabled: mapControlStore.gridFillEnabled,
                 fillType: 2,
                 opacity: mapControlStore.gridFillEnabled ? 1 : 0,
+                colorScaleExtend: {
+                    aboveMax: true,  // 大于色标最大值，继续使用最大值颜色填色
+                }
             },
             border: {
                 ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
