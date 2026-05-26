@@ -3,7 +3,7 @@
     <div class="legend-unit">{{ legendUnit }}</div>
     <div class="legend-body">
       <div class="legend-labels">
-        <span v-for="item in legendItems" :key="item.value">{{ formatValue(item.value) }}</span>
+        <span v-for="(item, index) in legendItems" :key="index">{{ item.displayValue }}</span>
       </div>
       <div class="legend-bar">
         <span
@@ -25,7 +25,12 @@ const store = useMapStore()
 
 const legendItems = computed(() => {
   const stops = store.mapRenderData.colorConfig?.stops || []
-  return [...stops].sort((a, b) => b.value - a.value)
+  return [...stops]
+    .sort((a, b) => b.value - a.value)
+    .map((item) => ({
+      ...item,
+      displayValue: item.value === -999999 ? '' : formatValue(item.value),
+    }))
 })
 
 const legendUnit = computed(() => store.mapRenderData.colorConfig?.unit || '')
