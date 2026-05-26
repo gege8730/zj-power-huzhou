@@ -52,7 +52,7 @@ onMounted(async () => {
         mapControlStore.setMap(zjqxMap as any);
 
         // 先加载 geojson
-        const adminBoundary = await fetch('/sample/huz.geojson')
+        const adminBoundary = await fetch(`${import.meta.env.VITE_APP_BASE_URL}/sample/huz.geojson`)
             .then((res) => {
                 if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
                 return res.json() as Promise<ClipGeometryInput>;

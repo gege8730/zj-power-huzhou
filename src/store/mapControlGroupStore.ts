@@ -100,9 +100,9 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
   },
 ]
 
-const COUNTY_BOUNDARY_URL = '/sample/country_bounder.geojson'
-const COUNTY_LONLAT_URL = '/sample/lonlat.json'
-const TOWN_BOUNDARY_URL = '/sample/town_bounder.geojson'
+const COUNTY_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/country_bounder.geojson`
+const COUNTY_LONLAT_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/lonlat.json`
+const TOWN_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/town_bounder.geojson`
 
 const COUNTY_BOUNDARY_STYLE: PathOptions = {
   color: '#76d8ff',

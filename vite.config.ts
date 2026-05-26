@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
 
   return {
+    base: env.VITE_APP_BASE_URL,
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src')
@@ -26,10 +27,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        '/hz': {
+        '/hz/api': {
           target: env.VITE_APP_PROXY_TARGET,
           changeOrigin: true,
-          secure: false
+          secure: false,
         }
       }
     }
