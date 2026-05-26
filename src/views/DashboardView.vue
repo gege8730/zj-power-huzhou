@@ -92,6 +92,10 @@ function filterForecastTimeline(timeline: any[], duration: string) {
   const durationHours = getDurationHours(duration)
   if (!start.isValid()) return timeline
 
+  if (duration === 'D' || duration === '24H') {
+    return filterDailyForecastTimeline(timeline, start)
+  }
+
   return timeline
     .filter((item: any) => dayjs(item.dateTime).minute() === 0)
     .filter((item: any) => {
@@ -99,6 +103,29 @@ function filterForecastTimeline(timeline: any[], duration: string) {
       const diffHour = current.diff(start, 'hour')
       return diffHour > 0 && diffHour % durationHours === 0
     })
+}
+
+function filterDailyForecastTimeline(timeline: any[], start: dayjs.Dayjs) {
+  const validTimeline = timeline.filter((item: any) => {
+    const current = dayjs(item.dateTime)
+    return current.isValid() && current.minute() === 0 && current.isAfter(start)
+  })
+
+  if (!validTimeline.length) return []
+
+  const targetHour = dayjs(validTimeline[0].dateTime).hour()
+  const dailyMap = new Map<string, any>()
+
+  validTimeline.forEach((item: any) => {
+    const current = dayjs(item.dateTime)
+    const dayKey = current.format('YYYY-MM-DD')
+
+    if (current.hour() === targetHour && !dailyMap.has(dayKey)) {
+      dailyMap.set(dayKey, item)
+    }
+  })
+
+  return Array.from(dailyMap.values())
 }
 
 function parseTimelineParamTime(value: string) {

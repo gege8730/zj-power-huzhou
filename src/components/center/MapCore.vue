@@ -35,7 +35,7 @@ onMounted(async () => {
             zoom: 9.3,
             zoomSnap: 0.1,
             zoomDelta: 0.1,
-            maxZoom: 13,
+            maxZoom: 15,
             minZoom: 8.5,
             wheelPxPerZoomLevel: 300,
             zoomControl: false, //禁用 + - 按钮
