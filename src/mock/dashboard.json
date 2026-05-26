@@ -261,11 +261,11 @@
       "enabled": true,
       "items": [
         {
-          "name": "县界",
+          "name": "区（县）界",
           "checked": true
         },
         {
-          "name": "县名",
+          "name": "区（县）名",
           "checked": false
         },
         {

@@ -91,8 +91,8 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
     switchable: false,
     enabled: true,
     items: [
-      { key: 'countyBoundary', name: '县界', checked: true },
-      { key: 'countyName', name: '县名', checked: false },
+      { key: 'countyBoundary', name: '区(县)界', checked: true },
+      { key: 'countyName', name: '区(县)名', checked: false },
       { key: 'townBoundary', name: '乡镇界', checked: false },
       { key: 'townName', name: '乡镇名', checked: false },
       { key: 'mapClip', name: '地图裁边', checked: true },

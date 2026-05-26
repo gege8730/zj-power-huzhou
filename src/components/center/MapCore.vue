@@ -242,7 +242,7 @@ onMounted(async () => {
             }
         };
 
-        watch(() => [store.mapRenderData.gridData, store.mapRenderData.colorConfig], () => {
+        watch(() => [store.mapRenderData.gridData], () => {
             updateGridLayer();
         }, { immediate: true, deep: true });
 

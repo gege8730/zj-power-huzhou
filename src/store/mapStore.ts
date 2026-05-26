@@ -480,7 +480,7 @@ export const useMapStore = defineStore('map', () => {
     const start = getForecastStartTime(baseTime.value, currentFactor.value.eleDuration[currentOptionIndex.value] || 'H')
     const durationHours = getDurationHours(currentFactor.value.eleDuration[currentOptionIndex.value] || 'H')
     const end = selectedTime
-    const startText = start.format('YYYY年MM月DD日HH时')
+    const startText = end.subtract(durationHours, 'hour').format('YYYY年MM月DD日HH时')
     const endText = end.format('DD日HH时')
     const durationText = durationHours > 1 ? `${durationHours}小时` : ''
     const factorName = `${durationText}${currentFactor.value.name}预报图`

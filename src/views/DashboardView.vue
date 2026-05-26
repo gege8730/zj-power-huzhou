@@ -98,11 +98,6 @@ function filterForecastTimeline(timeline: any[], duration: string) {
 
   return timeline
     .filter((item: any) => dayjs(item.dateTime).minute() === 0)
-    .filter((item: any) => {
-      const current = dayjs(item.dateTime)
-      const diffHour = current.diff(start, 'hour')
-      return diffHour > 0 && diffHour % durationHours === 0
-    })
 }
 
 function filterDailyForecastTimeline(timeline: any[], start: dayjs.Dayjs) {
