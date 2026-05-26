@@ -85,22 +85,69 @@ onMounted(async () => {
             },
         });
 
+        const isKmUnit = (unit?: string) => {
+            const normalizedUnit = String(unit || '').trim().toLowerCase()
+            return ['km', '公里', '千米'].includes(normalizedUnit)
+        }
+
+        const shouldRenderVisibilityAsKm = () => (
+            store.currentFactorType === 'visibility'
+            && isKmUnit(store.mapRenderData.colorConfig?.unit)
+        )
+
+        const isMissingGridValue = (value: unknown, missingValue: unknown) => {
+            const numericValue = Number(value)
+            if (!Number.isFinite(numericValue)) return true
+            if (missingValue == null) return false
+
+            const numericMissingValue = Number(missingValue)
+            return Number.isFinite(numericMissingValue) && numericValue === numericMissingValue
+        }
+
+        const convertMeterValueToKm = (value: unknown, missingValue: unknown) => {
+            if (isMissingGridValue(value, missingValue)) return Number(value)
+            return Number(value) / 1000
+        }
+
+        const convertOptionalMeterValueToKm = (value: unknown, missingValue: unknown) => {
+            if (value == null || isMissingGridValue(value, missingValue)) return value
+            return Number(value) / 1000
+        }
+
         /**
-         * 能见度接口色标单位是 km，而格点数据值是 m。
-         * 这里只为填色渲染换算阈值，store 中的原始色标和格点文本层都不做转换。
+         * 能见度接口格点值是 m，色标单位是 km。
+         * 这里按色标单位把参与绘制的格点值转成 km，保证填色、文本和图例单位一致。
+         * 注意不直接修改 store 中的原始数据，missingValue 也保持原值，避免缺测被误绘制。
          */
-        const getRenderColorStops = () => {
-            const config = store.mapRenderData.colorConfig
-            const stops = config?.stops || []
-            const unit = String(config?.unit || '').trim().toLowerCase()
-            const needVisibilityMeterScale = store.currentFactorType === 'visibility' && ['km', '公里', '千米'].includes(unit)
+        const getRenderGridData = (gridData: any) => {
+            if (!gridData || !shouldRenderVisibilityAsKm()) return gridData
 
-            if (!needVisibilityMeterScale) return stops
+            const missingValue = gridData.missingValue
 
-            return stops.map((item) => ({
-                ...item,
-                value: item.value * 1000,
-            }))
+            if (gridData.values instanceof Float32Array) {
+                const values = new Float32Array(gridData.values.length)
+                for (let index = 0; index < gridData.values.length; index++) {
+                    values[index] = convertMeterValueToKm(gridData.values[index], missingValue)
+                }
+
+                return {
+                    ...gridData,
+                    values,
+                    minValue: convertOptionalMeterValueToKm(gridData.minValue, missingValue),
+                    maxValue: convertOptionalMeterValueToKm(gridData.maxValue, missingValue),
+                }
+            }
+
+            if (Array.isArray(gridData.v)) {
+                return {
+                    ...gridData,
+                    v: gridData.v.map((value: unknown) => convertMeterValueToKm(value, missingValue)),
+                    minValue: convertOptionalMeterValueToKm(gridData.minValue, missingValue),
+                    maxValue: convertOptionalMeterValueToKm(gridData.maxValue, missingValue),
+                }
+            }
+
+            return gridData
         }
 
         const getColorScaleResources = () => {
@@ -109,7 +156,7 @@ onMounted(async () => {
 
             const colorConfig: ColorScaleJson = {
                 fieldName: config.fieldName,
-                stops: getRenderColorStops(),
+                stops: config.stops,
             }
             const colorize = createColorScale(colorConfig, { mode: 'step', stopKey: 'stops' });
             const palette = createPaletteTextureData(colorConfig, { mode: 'step', stopKey: 'stops' });
@@ -169,9 +216,11 @@ onMounted(async () => {
                 return;
             }
 
+            const renderGridData = getRenderGridData(gridData)
+
             if (layer) {
                 layer.update({
-                    data: gridData,
+                    data: renderGridData,
                     normalize: { rowOrder: 'south-to-north' },
                     palette: colorResources.palette,
                     colorize: colorResources.colorize,
@@ -179,7 +228,7 @@ onMounted(async () => {
                 applyGridControlOptions();
                 applyGridClip();
             } else {
-                const grid = normalizeWeatherGrid(gridData, { rowOrder: 'south-to-north' });
+                const grid = normalizeWeatherGrid(renderGridData, { rowOrder: 'south-to-north' });
                 layer = new ZJQXGridFieldLayer({
                     data: grid,
                     palette: colorResources.palette,
@@ -193,7 +242,7 @@ onMounted(async () => {
             }
         };
 
-        watch(() => [store.mapRenderData.gridData], () => {
+        watch(() => [store.mapRenderData.gridData, store.mapRenderData.colorConfig], () => {
             updateGridLayer();
         }, { immediate: true, deep: true });
 
