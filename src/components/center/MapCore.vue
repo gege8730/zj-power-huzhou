@@ -92,6 +92,7 @@ onMounted(async () => {
 
         const shouldRenderVisibilityAsKm = () => (
             store.currentFactorType === 'visibility'
+            && store.productMode === 'live'
             && isKmUnit(store.mapRenderData.colorConfig?.unit)
         )
 
