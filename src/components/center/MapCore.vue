@@ -5,11 +5,10 @@
 </template>
 
 <script setup lang="ts">
-import 'leaflet/dist/leaflet.css';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import {
-    ZJQXMap,
-    ZJQXGridFieldLayer,
+    ZJQXOpenLayersMap as ZJQXMap,
+    ZJQXOpenLayersGridFieldLayer as ZJQXGridFieldLayer,
     normalizeWeatherGrid,
     createColorScale,
     createPaletteTextureData,
@@ -17,7 +16,7 @@ import {
     DEFAULT_GRID_FIELD_FILL_OPTIONS,
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
-import type { ColorScaleJson, ZJQXGridFieldLayerOptions, ClipGeometryInput } from '@zjqx/gridfield';
+import type { ColorScaleJson, ZJQXOpenLayersGridFieldLayerOptions, ClipGeometryInput } from '@zjqx/gridfield';
 import { useLayerToolbarStore, useMapControlGroupStore, useMapStore } from '@/store'
 
 const store = useMapStore()
@@ -25,7 +24,7 @@ const layerToolbarStore = useLayerToolbarStore()
 const mapControlStore = useMapControlGroupStore()
 
 const mapContainer = ref<HTMLElement | null>(null);
-let zjqxMap: ReturnType<typeof ZJQXMap.initMap> | null = null;
+let zjqxMap: InstanceType<typeof ZJQXMap> | null = null;
 
 onMounted(async () => {
     try {
@@ -33,18 +32,21 @@ onMounted(async () => {
         zjqxMap = ZJQXMap.initMap('map', {
             center: [30.7541, 119.786],
             zoom: 9.3,
-            zoomSnap: 0.1,
-            zoomDelta: 0.1,
             maxZoom: 15,
             minZoom: 8.5,
-            wheelPxPerZoomLevel: 300,
-            zoomControl: false, //禁用 + - 按钮
-            doubleClickZoom: false, // 禁用双击放大
-            attributionControl: false, // 移除右下角leaflet标识
+            controls: false,
             baseLayer: {
                 url: `https://t5.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${import.meta.env.VITE_APP_TDT_TK}`,
-                options: {
+                sourceOptions: {
+                    crossOrigin: 'anonymous',
                     maxZoom: 18,
+                    transition: 0,
+                    wrapX: true,
+                },
+                layerOptions: {
+                    className: 'zjqx-base-tile-layer',
+                    zIndex: 0,
+                    preload: 3,
                 },
             },
         });
@@ -237,7 +239,12 @@ onMounted(async () => {
                     clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
                     ...getGridControlOptions(),
                     popup: false,
-                } as ZJQXGridFieldLayerOptions);
+                    zIndex: 300,
+                    opacity: 1,
+                    renderResolutionMode: 'integer-zoom',
+                    interpolate: true,
+                    ratio: 1.15,
+                } as ZJQXOpenLayersGridFieldLayerOptions);
                 zjqxMap!.addZJQXLayer(layer);
                 applyGridClip();
             }
@@ -286,37 +293,52 @@ onUnmounted(() => {
 </script>
 
 <style>
-.leaflet-tile-pane {
+.zjqx-base-tile-layer {
     filter: grayscale(100%) sepia(30%) invert(100%) saturate(270%);
     /* filter: grayscale(150%) contrast(10%) brightness(170%) sepia(.1) invert(.85) saturate(200%) !important; */
     /* filter: grayscale(150%) sepia(8%) invert(90%) saturate(100%) !important; */
     /* filter: brightness(0.2) contrast(1.28) saturate(0.42) hue-rotate(200deg) grayscale(0.42) !important; */
 }
 
+#map .ol-overlaycontainer,
+#map .ol-overlaycontainer-stopevent {
+    pointer-events: none;
+    z-index: 700;
+}
+
 .map-control-station-name,
 .map-control-station-value,
 .map-control-county-name,
 .map-control-town-name {
+    position: relative;
+    z-index: 710;
+    display: inline-block;
     width: max-content !important;
     height: auto !important;
     pointer-events: none;
+    user-select: none;
     white-space: nowrap;
+    line-height: 1.2;
     text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75), 0 0 6px rgba(0, 0, 0, 0.45);
+    transform: translateZ(0);
 }
 
 .map-control-station-name {
+    z-index: 723;
     color: #e9fbff;
     font-size: 14px;
     font-weight: 500;
 }
 
 .map-control-station-value {
+    z-index: 724;
     color: #ffbb00;
     font-size: 14px;
     font-weight: 700;
 }
 
 .map-control-county-name {
+    z-index: 718;
     color: #f7fbff;
     font-size: 14px;
     font-weight: 700;
@@ -325,6 +347,7 @@ onUnmounted(() => {
 }
 
 .map-control-town-name {
+    z-index: 716;
     color: rgba(224, 247, 255, 0.88);
     font-size: 10px;
     font-weight: 500;

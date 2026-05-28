@@ -1,7 +1,10 @@
 import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import dayjs from 'dayjs'
-import L, { type ImageOverlay, type LatLngBoundsExpression } from 'leaflet'
+import ImageLayer from 'ol/layer/Image.js'
+import ImageStatic from 'ol/source/ImageStatic.js'
+import OlMap from 'ol/Map.js'
+import { transformExtent } from 'ol/proj.js'
 import { ElMessage } from 'element-plus'
 import { radarList } from '@/api/weather'
 
@@ -16,14 +19,14 @@ export interface RadarImageItem {
   FileName: string
 }
 
-interface LeafletLikeMap {
+interface OpenLayersMapLike {
   addLayer?: (layer: any) => unknown
   removeLayer?: (layer: any) => unknown
-  map?: LeafletLikeMap
-  _map?: LeafletLikeMap
-  leafletMap?: LeafletLikeMap
-  getMap?: () => LeafletLikeMap
-  getLeafletMap?: () => LeafletLikeMap
+  getLayers?: () => { getArray: () => any[] }
+  getRawMap?: () => OlMap
+  getOpenLayersMap?: () => OlMap
+  map?: OpenLayersMapLike
+  _map?: OpenLayersMapLike
 }
 
 const TOOL_NAME_MAP: Record<string, LayerToolbarKey> = {
@@ -33,17 +36,15 @@ const TOOL_NAME_MAP: Record<string, LayerToolbarKey> = {
   '输电线路': 'line',
 }
 
-const RADAR_IMAGE_BOUNDS: LatLngBoundsExpression = [
-  [26.3196, 115.8459],
-  [34.07389, 124.829],
-]
+/** 雷达图片经纬度范围：[west, south, east, north] */
+const RADAR_IMAGE_EXTENT_4326: [number, number, number, number] = [115.8459, 26.3196, 124.829, 34.07389]
 
 export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   /** 当前激活图层，默认不选中 */
   const activeKey = ref<LayerToolbarKey | ''>('')
 
-  /** 当前地图实例，兼容 Leaflet addLayer/removeLayer 即可 */
-  const mapInstance = shallowRef<LeafletLikeMap | null>(null)
+  /** 当前地图实例，兼容 ZJQXOpenLayersMap 或原生 ol/Map */
+  const mapInstance = shallowRef<OpenLayersMapLike | null>(null)
 
   /** 雷达时次列表 */
   const radarImages = ref<RadarImageItem[]>([])
@@ -55,7 +56,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   const radarLoading = ref(false)
 
   /** 雷达图层缓存，切换时次只替换当前图片图层 */
-  let radarLayer: ImageOverlay | null = null
+  let radarLayer: ImageLayer<ImageStatic> | null = null
 
   const isRadarActive = computed(() => activeKey.value === 'radar')
   const currentRadar = computed(() => radarImages.value[radarIndex.value] || null)
@@ -70,23 +71,29 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     return TOOL_NAME_MAP[normalName] || ''
   }
 
-  function setMap(map: LeafletLikeMap | null) {
+  function setMap(map: OpenLayersMapLike | null) {
     if (!map) removeRadarLayer()
     mapInstance.value = map
     if (map && isRadarActive.value && currentRadarUrl.value) renderRadarLayer()
   }
 
-  function getLeafletMap() {
+  function getOpenLayersMap(): OlMap | null {
     const map = mapInstance.value
     if (!map) return null
-    if (typeof map.addLayer === 'function' && typeof map.removeLayer === 'function') return map
-    if (map.map && typeof map.map.addLayer === 'function') return map.map
-    if (map._map && typeof map._map.addLayer === 'function') return map._map
-    if (map.leafletMap && typeof map.leafletMap.addLayer === 'function') return map.leafletMap
-    const maybeMap = map.getMap?.()
-    if (maybeMap && typeof maybeMap.addLayer === 'function') return maybeMap
-    const maybeLeafletMap = map.getLeafletMap?.()
-    if (maybeLeafletMap && typeof maybeLeafletMap.addLayer === 'function') return maybeLeafletMap
+    if (map instanceof OlMap) return map
+    if (typeof map.addLayer === 'function' && typeof map.removeLayer === 'function' && typeof map.getLayers === 'function') return map as OlMap
+    const rawMap = map.getRawMap?.()
+    if (rawMap) return rawMap
+    const olMap = map.getOpenLayersMap?.()
+    if (olMap) return olMap
+    if (map.map) {
+      mapInstance.value = map.map
+      return getOpenLayersMap()
+    }
+    if (map._map) {
+      mapInstance.value = map._map
+      return getOpenLayersMap()
+    }
     return null
   }
 
@@ -151,25 +158,29 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   function renderRadarLayer() {
     if (!isRadarActive.value || !currentRadarUrl.value) return
 
-    const map = getLeafletMap()
+    const map = getOpenLayersMap()
     if (!map) {
       ElMessage.warning('地图尚未初始化，无法加载雷达图层')
       return
     }
 
     removeRadarLayer()
-    radarLayer = L.imageOverlay(currentRadarUrl.value, RADAR_IMAGE_BOUNDS, {
+    radarLayer = new ImageLayer({
+      source: new ImageStatic({
+        url: currentRadarUrl.value,
+        imageExtent: transformExtent(RADAR_IMAGE_EXTENT_4326, 'EPSG:4326', map.getView().getProjection()),
+        crossOrigin: 'anonymous',
+      }),
       opacity: 0.86,
-      interactive: false,
       zIndex: 430,
     })
-    radarLayer.addTo(map as L.Map)
+    map.addLayer(radarLayer)
   }
 
   function removeRadarLayer() {
-    const map = getLeafletMap()
+    const map = getOpenLayersMap()
     if (radarLayer && map) {
-      map.removeLayer?.(radarLayer)
+      map.removeLayer(radarLayer)
     }
     radarLayer = null
   }
@@ -218,9 +229,8 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   }
 })
 
-function formatRadarTime(fileTime?: string) {
-  if (!fileTime) return ''
-  const time = String(fileTime).replace(/\D/g, '')
-  if (time.length < 12) return fileTime
-  return `${time.slice(6, 8)}日${time.slice(8, 10)}时${time.slice(10, 12)}分雷达`
+function formatRadarTime(value?: string) {
+  if (!value) return ''
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed.format('MM-DD HH:mm') : value
 }
