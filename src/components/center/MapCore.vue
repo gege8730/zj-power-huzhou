@@ -32,8 +32,8 @@ onMounted(async () => {
         zjqxMap = ZJQXMap.initMap('map', {
             center: [30.7541, 119.786],
             zoom: 9.3,
-            maxZoom: 15,
-            minZoom: 8.5,
+            maxZoom: 14.5,
+            minZoom: 7.5,
             controls: false,
             baseLayer: {
                 url: `https://t5.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${import.meta.env.VITE_APP_TDT_TK}`,

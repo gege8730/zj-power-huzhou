@@ -231,6 +231,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
 
 function formatRadarTime(value?: string) {
   if (!value) return ''
-  const parsed = dayjs(value)
-  return parsed.isValid() ? parsed.format('MM-DD HH:mm') : value
+  const parsed = dayjs(value,'YYYYMMDDHHmmssZ')
+  console.log(parsed.isValid(), 'parsed radar time')
+  return parsed.isValid() ? parsed.format('MM月DD日 HH时mm分') : value
 }
