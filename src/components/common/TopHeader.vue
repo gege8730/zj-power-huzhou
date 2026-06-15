@@ -7,16 +7,15 @@
     <div class="week">{{ week }}</div>
     <div class="header-actions">
       <div class="help"><img src="../../assets/@.png" alt="帮助">{{ helpText }}</div>
-      <button
+      <span
         class="fullscreen-btn"
-        type="button"
         :class="{ active: layoutStore.isMapFullscreen }"
         :title="layoutStore.isMapFullscreen ? '退出全屏' : '全屏'"
         @click="layoutStore.toggleMapFullscreen()"
       >
         <span class="fullscreen-icon" aria-hidden="true"></span>
         <span>{{ layoutStore.isMapFullscreen ? '退出全屏' : '全屏' }}</span>
-      </button>
+      </span>
     </div>
   </header>
 </template>
@@ -156,21 +155,18 @@ h1 {
   justify-content: center;
   gap: 0.32rem;
   padding: 0 0.62rem;
-  border: 1px solid rgba(49, 200, 255, 0.56);
+  border: none;
   border-radius: 0.16rem;
   color: #dff8ff;
   font-size: clamp(0.72rem, 0.72vw, 0.9rem);
-  background: linear-gradient(180deg, rgba(11, 112, 207, 0.78), rgba(5, 57, 130, 0.82));
-  box-shadow: inset 0 0 0.72rem rgba(86, 202, 255, 0.18), 0 0 0.45rem rgba(18, 147, 255, 0.28);
+  background: transparent;
   cursor: pointer;
-  transition: border-color 0.22s ease, color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+  transition: color 0.22s ease;
 }
 
 .fullscreen-btn:hover,
 .fullscreen-btn.active {
   color: #fff381;
-  background: linear-gradient(180deg, rgba(20, 132, 224, 0.9), rgba(8, 74, 150, 0.92));
-  box-shadow: inset 0 0 0.78rem rgba(255, 227, 62, 0.12), 0 0 0.62rem rgba(30, 169, 255, 0.34);
 }
 
 .fullscreen-icon {
