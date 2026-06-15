@@ -70,6 +70,16 @@ const props = defineProps<{
   min-height: 0;
   height: 100%;
   z-index: 1;
+  /* 地图画布顶部压到标题背景下方的距离只跟纵向布局有关，不能跟左右栏收缩的横向 gap 绑定 */
+  --map-canvas-offset-y: calc(var(--layout-gap) - 1.15vh);
+  transition: width var(--layout-transition), transform var(--layout-transition);
+}
+
+.map-stage :deep(.control-groups),
+.map-stage :deep(.layer-toolbar),
+.map-stage :deep(.time-axis),
+.map-stage :deep(.map-bottom-tabs) {
+  transition: left var(--layout-transition), right var(--layout-transition), width var(--layout-transition), transform var(--layout-transition), opacity var(--layout-transition);
 }
 
 .map-title {
@@ -119,10 +129,11 @@ const props = defineProps<{
 .map-canvas {
   position: absolute;
   width: calc(100vw);
-  height: calc(100% + var(--edge-bottom) + (var(--layout-gap) - 1.15vh));
-  left: calc((var(--side-w) + var(--layout-gap) + var(--edge-x))*-1);
-  top: calc((var(--layout-gap) - 1.15vh)*-1);
+  height: calc(100% + var(--edge-bottom) + var(--map-canvas-offset-y));
+  left: calc((var(--layout-side-current, var(--side-w)) + var(--layout-gap-current, var(--layout-gap)) + var(--edge-x))*-1);
+  top: calc(-1 * var(--map-canvas-offset-y));
   z-index: 1;
+  transition: left var(--layout-transition), top var(--layout-transition), width var(--layout-transition), height var(--layout-transition);
 }
 
 .map-vignette {

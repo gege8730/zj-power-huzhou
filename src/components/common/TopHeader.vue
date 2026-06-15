@@ -5,13 +5,26 @@
       <div class="date">{{ date }}</div>
     </div>
     <div class="week">{{ week }}</div>
-    <div class="help"><img src="../../assets/@.png" alt="帮助">{{ helpText }}</div>
+    <div class="header-actions">
+      <div class="help"><img src="../../assets/@.png" alt="帮助">{{ helpText }}</div>
+      <button
+        class="fullscreen-btn"
+        type="button"
+        :class="{ active: layoutStore.isMapFullscreen }"
+        :title="layoutStore.isMapFullscreen ? '退出全屏' : '全屏'"
+        @click="layoutStore.toggleMapFullscreen()"
+      >
+        <span class="fullscreen-icon" aria-hidden="true"></span>
+        <span>{{ layoutStore.isMapFullscreen ? '退出全屏' : '全屏' }}</span>
+      </button>
+    </div>
   </header>
 </template>
 <script setup lang="ts">
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
-import {ref, onMounted, onUnmounted} from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useLayoutStore } from '@/store'
 
 dayjs.locale('zh-cn')
 let currentTime = ref(dayjs().format('HH:mm:ss'))
@@ -19,6 +32,7 @@ let date = dayjs().format('YYYY年MM月DD日')
 let week = dayjs().format('dddd')
 let helpText = '告警规则说明'
 let timer: number
+const layoutStore = useLayoutStore()
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -115,15 +129,70 @@ h1 {
   right: 14%;
 }
 
-.help {
+.header-actions {
   position: absolute;
   right: clamp(1rem, 2vw, 2.4rem);
   top: 25%;
-  color: #c3e8f8;
-  font-size: clamp(0.75rem, 0.75vw, 0.95rem);
   z-index: 3;
   display: flex;
   align-items: center;
+  gap: clamp(0.55rem, 0.75vw, 0.9rem);
+}
+
+.help {
+  color: #c3e8f8;
+  font-size: clamp(0.75rem, 0.75vw, 0.95rem);
+  display: flex;
+  align-items: center;
   gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.fullscreen-btn {
+  height: clamp(1.55rem, 2.5vh, 2rem);
+  min-width: clamp(4.4rem, 4.4vw, 5.6rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  padding: 0 0.62rem;
+  border: 1px solid rgba(49, 200, 255, 0.56);
+  border-radius: 0.16rem;
+  color: #dff8ff;
+  font-size: clamp(0.72rem, 0.72vw, 0.9rem);
+  background: linear-gradient(180deg, rgba(11, 112, 207, 0.78), rgba(5, 57, 130, 0.82));
+  box-shadow: inset 0 0 0.72rem rgba(86, 202, 255, 0.18), 0 0 0.45rem rgba(18, 147, 255, 0.28);
+  cursor: pointer;
+  transition: border-color 0.22s ease, color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.fullscreen-btn:hover,
+.fullscreen-btn.active {
+  color: #fff381;
+  background: linear-gradient(180deg, rgba(20, 132, 224, 0.9), rgba(8, 74, 150, 0.92));
+  box-shadow: inset 0 0 0.78rem rgba(255, 227, 62, 0.12), 0 0 0.62rem rgba(30, 169, 255, 0.34);
+}
+
+.fullscreen-icon {
+  position: relative;
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: 0 0 0.9rem;
+}
+
+.fullscreen-icon::before,
+.fullscreen-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid currentColor;
+}
+
+.fullscreen-icon::before {
+  clip-path: polygon(0 0, 43% 0, 43% 12%, 12% 12%, 12% 43%, 0 43%, 0 0, 57% 0, 100% 0, 100% 43%, 88% 43%, 88% 12%, 57% 12%);
+}
+
+.fullscreen-icon::after {
+  clip-path: polygon(0 57%, 12% 57%, 12% 88%, 43% 88%, 43% 100%, 0 100%, 0 57%, 57% 88%, 88% 88%, 88% 57%, 100% 57%, 100% 100%, 57% 100%);
 }
 </style>

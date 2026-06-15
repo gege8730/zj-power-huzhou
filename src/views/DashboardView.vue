@@ -1,7 +1,7 @@
 <template>
   <div class="screen-root">
     <div class="dashboard">
-      <div class="app-layer" v-if="initData">
+      <div class="app-layer" :class="{ 'map-fullscreen': layoutStore.isMapFullscreen }" v-if="initData">
         <TopHeader />
         <LeftSidebar :factors="store.factors" :forecast-text="initData.forecastText" :days="initData.forecastDays" />
         <MapStage :title="initData.mapTitle" :query-placeholder="initData.queryPlaceholder" :toolbar="initData.toolbar"
@@ -33,10 +33,11 @@ import { getTimeList, hzSmailDay, getDqByHz, dayForecast } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import 'element-plus/theme-chalk/el-message.css'
-import { useMapStore } from '@/store'
+import { useLayoutStore, useMapStore } from '@/store'
 import dayjs from 'dayjs'
 
 const store = useMapStore()
+const layoutStore = useLayoutStore()
 const initData = ref(rawMock as unknown as DashboardMock)
 const similarDate = ref('相似日')
 const pdfPreviewVisible = ref(false)

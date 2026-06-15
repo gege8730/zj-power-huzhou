@@ -285,124 +285,76 @@
   ],
   "warning": [
     {
-      "town": "XX街道",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "低风险"
-      },
-      "h17": {
-        "risk": "低风险"
-      },
-      "h18": {
-        "risk": "低风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX镇",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "中风险"
-      },
-      "h17": {
-        "risk": "中风险"
-      },
-      "h18": {
-        "risk": "高风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX街道",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "低风险"
-      },
-      "h17": {
-        "risk": "中风险"
-      },
-      "h18": {
-        "risk": "中风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX街道",
-      "realtime": {
-        "risk": "中风险"
-      },
-      "h16": {
-        "risk": "中风险"
-      },
-      "h17": {
-        "risk": "高风险"
-      },
-      "h18": {
-        "risk": "高风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX镇",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "低风险"
-      },
-      "h17": {
-        "risk": "低风险"
-      },
-      "h18": {
-        "risk": "低风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX镇",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "中风险"
-      },
-      "h17": {
-        "risk": "中风险"
-      },
-      "h18": {
-        "risk": "高风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX街道",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "低风险"
-      },
-      "h17": {
-        "risk": "低风险"
-      },
-      "h18": {
-        "risk": "低风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     },
     {
-      "town": "XX镇",
-      "realtime": {
-        "risk": "低风险"
-      },
-      "h16": {
-        "risk": "低风险"
-      },
-      "h17": {
-        "risk": "低风险"
-      },
-      "h18": {
-        "risk": "低风险"
-      }
+      "town": "",
+      "realtime": { "risk": "" },
+      "hours": [
+        { "time": "15:00", "risk": "" },
+        { "time": "16:00", "risk": "" },
+        { "time": "17:00", "risk": "" }
+      ]
     }
   ],
   "similarDays": [

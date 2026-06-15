@@ -1,23 +1,19 @@
 <template>
   <BasePanel title="短临告警" class-name="short-warning">
-    <div class="warning-time">数据时间：2026/04/15 14:30</div>
+    <div class="warning-time">数据时间：{{  }}</div>
     <table class="warning-table">
       <thead>
         <tr>
           <th>乡　镇</th>
           <th>当前实况</th>
-          <th>16:00</th>
-          <th>17:00</th>
-          <th>18:00</th>
+          <th v-for="hour in futureHours" :key="hour">{{ hour }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="`${row.town}-${row.h18.risk}-${row.h16.risk}`">
+        <tr v-for="row in rows" :key="row.town">
           <td>{{ row.town }}</td>
           <td :class="riskClass(row.realtime.risk)">{{ row.realtime.risk }}</td>
-          <td :class="riskClass(row.h16.risk)">{{ row.h16.risk }}</td>
-          <td :class="riskClass(row.h17.risk)">{{ row.h17.risk }}</td>
-          <td :class="riskClass(row.h18.risk)">{{ row.h18.risk }}</td>
+          <td v-for="hour in row.hours" :key="hour.time" :class="riskClass(hour.risk)">{{ hour.risk }}</td>
         </tr>
       </tbody>
     </table>
@@ -25,12 +21,21 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { WarningRow } from '../../types/dashboard'
 import BasePanel from '../common/BasePanel.vue'
 
-defineProps<{
+const props = defineProps<{
   rows: WarningRow[]
 }>()
+
+// 从第一行数据的 hours 中提取未来三小时的时间标签
+const futureHours = computed(() => {
+  if (props.rows.length > 0 && props.rows[0].hours.length > 0) {
+    return props.rows[0].hours.map(h => h.time)
+  }
+  return []
+})
 
 const riskClass = (risk: WarningRow['realtime']['risk']) => ({
   risk: true,

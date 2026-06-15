@@ -29,7 +29,9 @@ const emit = defineEmits<{
 .right-sidebar {
   grid-column: 3;
   grid-row: 2;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;

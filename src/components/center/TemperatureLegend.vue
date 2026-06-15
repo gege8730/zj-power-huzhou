@@ -44,7 +44,7 @@ const formatValue = (value: number) => Number.isInteger(value) ? String(value) :
   right: 1.2%;
   top: 20.2%;
   width: clamp(3.35rem, 3.75vw, 4.35rem);
-  height: 62%;
+  height: 50%;
   z-index: 6;
   padding: clamp(0.45rem, 0.7vh, 0.7rem) clamp(0.38rem, 0.45vw, 0.55rem);
   /* background: linear-gradient(180deg, rgba(3, 43, 104, 0.92), rgba(4, 31, 82, 0.95));

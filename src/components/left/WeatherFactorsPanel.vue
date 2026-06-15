@@ -1,7 +1,7 @@
 <template>
   <BasePanel title="要素叠加" class-name="weather-factors">
     <div class="factor-list">
-      <div v-for="factor in factors" :key="factor.name" class="factor-row">
+      <div v-for="factor in factors" :key="factor.name" class="factor-row" v-show="factor.ele.some(e => e !== '')">
         <span class="factor-name">{{ factor.name }}</span>
         <div class="factor-options">
           <span
@@ -10,6 +10,7 @@
             class="factor-option"
             :class="{ active: store.currentFactorType === factor.type && store.currentOptionIndex === index }"
             @click="clickFactorOption(factor.type,index)"
+            v-show="factor.ele[index] != ''"
           >
             {{ option }}
           </span>
@@ -48,12 +49,15 @@ const clickFactorOption = (FType: FactorType, option_index: number) => {
 
 .factor-list {
   height: auto;
+  min-height: clamp(12rem, 12vh, 12rem);
   display: flex;
   flex-direction: column;
+  justify-content: space-evenly;
   gap: clamp(0.22rem, 0.52vh, 0.36rem);
 }
 
 .factor-row {
+  flex: 1;
   min-height: clamp(1.3rem, 2.45vh, 1.75rem);
   display: grid;
   grid-template-columns: minmax(7rem, 20%) 1fr;

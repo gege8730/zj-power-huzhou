@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
     ZJQXOpenLayersMap as ZJQXMap,
     ZJQXOpenLayersGridFieldLayer as ZJQXGridFieldLayer,
@@ -17,21 +17,83 @@ import {
     DEFAULT_GRID_FIELD_LABEL_OPTIONS,
 } from '@zjqx/gridfield';
 import type { ColorScaleJson, ZJQXOpenLayersGridFieldLayerOptions, ClipGeometryInput } from '@zjqx/gridfield';
-import { useLayerToolbarStore, useMapControlGroupStore, useMapStore } from '@/store'
+import { useLayerToolbarStore, useLayoutStore, useMapControlGroupStore, useMapStore } from '@/store'
 
 const store = useMapStore()
 const layerToolbarStore = useLayerToolbarStore()
 const mapControlStore = useMapControlGroupStore()
+const layoutStore = useLayoutStore()
 
 const mapContainer = ref<HTMLElement | null>(null);
 let zjqxMap: InstanceType<typeof ZJQXMap> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
+const NORMAL_MAP_ZOOM = 9.3;
+const FULLSCREEN_MAP_ZOOM = 10;
+const MAP_ZOOM_ANIMATION_DURATION = 260;
+const LAYOUT_TRANSITION_DURATION = 460;
+
+const getOpenLayersMap = () => {
+    const map = zjqxMap as any
+    if (!map) return null
+
+    const rawMap = map.getRawMap?.() || map.getOpenLayersMap?.() || map.map || map._map
+    if (rawMap && typeof rawMap.updateSize === 'function') return rawMap
+    if (typeof map.updateSize === 'function') return map
+    return null
+}
+
+const updateMapSize = () => {
+    const map = getOpenLayersMap()
+    map?.updateSize?.()
+}
+
+const updateMapSizeDuringLayoutTransition = () => {
+    nextTick(() => {
+        updateMapSize()
+        window.setTimeout(updateMapSize, 80)
+        window.setTimeout(updateMapSize, LAYOUT_TRANSITION_DURATION)
+    })
+}
+
+const getOpenLayersView = () => {
+    const map = getOpenLayersMap() as any
+    return map?.getView?.() || null
+}
+
+const setMapZoom = (zoom: number, animate = true) => {
+    const view = getOpenLayersView() as any
+    if (!view) return
+
+    if (animate && typeof view.animate === 'function') {
+        view.animate({ zoom, duration: MAP_ZOOM_ANIMATION_DURATION })
+        return
+    }
+
+    if (typeof view.setZoom === 'function') {
+        view.setZoom(zoom)
+    }
+}
+
+const applyFullscreenZoom = (isFullscreen: boolean) => {
+    const targetZoom = isFullscreen ? FULLSCREEN_MAP_ZOOM : NORMAL_MAP_ZOOM
+
+    nextTick(() => {
+        updateMapSize()
+        setMapZoom(targetZoom)
+        window.setTimeout(() => {
+            updateMapSize()
+            setMapZoom(targetZoom, false)
+        }, LAYOUT_TRANSITION_DURATION)
+    })
+}
 
 onMounted(async () => {
     try {
         // 初始化地图
         zjqxMap = ZJQXMap.initMap('map', {
             center: [30.7541, 119.786],
-            zoom: 9.3,
+            zoom: NORMAL_MAP_ZOOM,
             maxZoom: 14.5,
             minZoom: 7.5,
             controls: false,
@@ -52,6 +114,12 @@ onMounted(async () => {
         });
         layerToolbarStore.setMap(zjqxMap as any);
         mapControlStore.setMap(zjqxMap as any);
+
+        if (mapContainer.value) {
+            resizeObserver = new ResizeObserver(updateMapSizeDuringLayoutTransition)
+            resizeObserver.observe(mapContainer.value)
+        }
+        updateMapSizeDuringLayoutTransition()
 
         // 先加载 geojson
         const adminBoundary = await fetch(`${import.meta.env.VITE_APP_BASE_URL}/sample/huz.geojson`)
@@ -279,8 +347,16 @@ onMounted(async () => {
     }
 });
 
+
+watch(() => layoutStore.isMapFullscreen, (isFullscreen) => {
+    updateMapSizeDuringLayoutTransition()
+    applyFullscreenZoom(isFullscreen)
+})
+
 // 组件卸载时清理地图实例，防止内存泄漏
 onUnmounted(() => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
     layerToolbarStore.clearActiveLayer();
     layerToolbarStore.setMap(null);
     mapControlStore.removeAllControlLayers();

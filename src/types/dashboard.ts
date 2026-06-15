@@ -18,12 +18,15 @@ export interface WarningCell {
   risk: '低风险' | '中风险' | '高风险'
 }
 
+export interface WarningHour {
+  time: string  // 如 "16:00"
+  risk: WarningCell['risk']
+}
+
 export interface WarningRow {
   town: string
   realtime: WarningCell
-  h16: WarningCell
-  h17: WarningCell
-  h18: WarningCell
+  hours: WarningHour[]  // 未来三个小时
 }
 
 export interface SimilarDay {

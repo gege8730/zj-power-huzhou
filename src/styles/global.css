@@ -22,6 +22,7 @@
   --layout-gap: clamp(0.8rem, 1.4vw, 1.7rem);
   --side-w: clamp(22rem, 22.8vw, 30rem);
   --panel-gap: clamp(0.8rem, 1.8vh, 1.3rem);
+  --layout-transition: 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 * {
@@ -93,12 +94,47 @@ input {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: var(--side-w) minmax(0, 1fr) var(--side-w);
+  --layout-side-current: var(--side-w);
+  --layout-gap-current: var(--layout-gap);
+  grid-template-columns: var(--layout-side-current) minmax(0, 1fr) var(--layout-side-current);
   grid-template-rows: var(--header-h) minmax(0, 1fr);
-  column-gap: var(--layout-gap);
+  column-gap: var(--layout-gap-current);
   row-gap: clamp(0.55rem, 1.15vh, 1rem);
   padding: 0 var(--edge-x) var(--edge-bottom);
+  transition: grid-template-columns var(--layout-transition), column-gap var(--layout-transition);
 }
+
+.app-layer.map-fullscreen {
+  --layout-side-current: 0rem;
+  --layout-gap-current: 0rem;
+  grid-template-columns: 0rem minmax(0, 1fr) 0rem;
+  column-gap: 0rem;
+}
+
+.app-layer .left-sidebar,
+.app-layer .right-sidebar {
+  overflow: hidden;
+  transition:
+    opacity var(--layout-transition),
+    transform var(--layout-transition),
+    filter var(--layout-transition);
+  will-change: opacity, transform;
+}
+
+.app-layer.map-fullscreen .left-sidebar {
+  opacity: 0;
+  transform: translateX(calc((var(--side-w) + var(--layout-gap)) * -1));
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+.app-layer.map-fullscreen .right-sidebar {
+  opacity: 0;
+  transform: translateX(calc(var(--side-w) + var(--layout-gap)));
+  pointer-events: none;
+  filter: blur(1px);
+}
+
 
 .glow-text {
   text-shadow: 0 0 0.65rem rgba(68, 210, 255, 0.7), 0 0 1.25rem rgba(20, 155, 255, 0.45);

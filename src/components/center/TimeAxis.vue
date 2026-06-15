@@ -21,13 +21,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from 'vue'
 import left_btn from '../../assets/left_arrow.png'
 import right_btn from '../../assets/right_arrow.png'
 import dayjs from 'dayjs'
-import { useMapStore } from '@/store'
+import { useLayoutStore, useMapStore } from '@/store'
 
 const store = useMapStore()
+const layoutStore = useLayoutStore()
 const props = defineProps<{
   timeline: Array<{ dateTime: string; filePath: string }>
 }>()
@@ -50,18 +51,32 @@ const timelinelist = computed(() => props.timeline.map(item => {
   return { time, day }
 }))
 const scrollbarRef = ref()
+let resizeObserver: ResizeObserver | null = null
+let defaultScrollTimer: ReturnType<typeof window.setTimeout> | null = null
+
+const getScrollbarWrap = () => scrollbarRef.value?.wrapRef as HTMLElement | undefined
+
+const getMaxScrollLeft = () => {
+  const wrap = getScrollbarWrap()
+  if (!wrap) return timelinelist.value.length * 50
+  return Math.max(0, wrap.scrollWidth - wrap.clientWidth)
+}
+
+const updateScrollbar = () => {
+  scrollbarRef.value?.update?.()
+}
 
 const scrollToStart = () => {
   nextTick(() => {
+    updateScrollbar()
     scrollbarRef.value?.setScrollLeft(0)
   })
 }
 
 const scrollToEnd = () => {
   nextTick(() => {
-    if (scrollbarRef.value) {
-      scrollbarRef.value.setScrollLeft(timelinelist.value.length * 50)
-    }
+    updateScrollbar()
+    scrollbarRef.value?.setScrollLeft(getMaxScrollLeft())
   })
 }
 
@@ -71,6 +86,24 @@ const scrollToDefault = () => {
     return
   }
   scrollToEnd()
+}
+
+/**
+ * 全屏/退出全屏时，时间轴容器宽度会跟随布局动画变化。
+ * 实况模式要求默认停在最右侧，所以需要在动画结束后再补一次定位，
+ * 否则从全屏切回普通布局时会使用旧的 scrollWidth，导致没有滑到最右。
+ */
+const scheduleDefaultScroll = () => {
+  scrollToDefault()
+
+  if (defaultScrollTimer) {
+    window.clearTimeout(defaultScrollTimer)
+  }
+
+  defaultScrollTimer = window.setTimeout(() => {
+    scrollToDefault()
+    defaultScrollTimer = null
+  }, 460)
 }
 
 const scrollLeft = () => {
@@ -87,8 +120,29 @@ const scrollRight = () => {
   }
 }
 
-onMounted(scrollToDefault)
-watch(() => [props.timeline, store.productMode], scrollToDefault, { deep: true })
+onMounted(() => {
+  scheduleDefaultScroll()
+
+  const wrap = getScrollbarWrap()
+  if (wrap && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      if (store.productMode !== 'forecast') {
+        scrollToEnd()
+      }
+    })
+    resizeObserver.observe(wrap)
+  }
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  if (defaultScrollTimer) {
+    window.clearTimeout(defaultScrollTimer)
+  }
+})
+
+watch(() => [props.timeline, store.productMode], scheduleDefaultScroll, { deep: true })
+watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
 </script>
 
 <style scoped>
@@ -126,7 +180,8 @@ watch(() => [props.timeline, store.productMode], scrollToDefault, { deep: true }
   justify-content: space-between;
   align-items: flex-start;
   padding-top: 0.05rem;
-  width: fit-content;
+  width: 100%;
+  min-width: max-content;
 }
 
 .axis-line::before {
