@@ -1,16 +1,15 @@
 <template>
   <BasePanel title="要素叠加" class-name="weather-factors">
     <div class="factor-list">
-      <div v-for="factor in factors" :key="factor.name" class="factor-row" v-show="factor.ele.some(e => e !== '')">
+      <div v-for="factor in factors" :key="factor.name" class="factor-row">
         <span class="factor-name">{{ factor.name }}</span>
         <div class="factor-options">
           <span
             v-for="(option, index) in factor.options"
             :key="option"
             class="factor-option"
-            :class="{ active: store.currentFactorType === factor.type && store.currentOptionIndex === index }"
-            @click="clickFactorOption(factor.type,index)"
-            v-show="factor.ele[index] != ''"
+            :class="{ active: store.currentFactorType === factor.type && store.currentOptionIndex === index, disabled: factor.ele[index] == '' }"
+            @click="factor.ele[index] != '' && clickFactorOption(factor.type,index)"
           >
             {{ option }}
           </span>
@@ -103,5 +102,11 @@ const clickFactorOption = (FType: FactorType, option_index: number) => {
 .factor-option.active {
   background: linear-gradient(90deg, transparent, rgba(39, 119, 245, 0.8), transparent);
   text-shadow: 0 0 0.5rem rgba(96, 213, 255, 0.8);
+}
+
+.factor-option.disabled {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  pointer-events: none;
 }
 </style>

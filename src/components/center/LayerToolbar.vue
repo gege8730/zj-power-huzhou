@@ -8,10 +8,10 @@
       v-for="item in items"
       :key="item"
       class="tool-item"
-      :class="{ active: layerStore.resolveToolbarKey(item) === layerStore.activeKey }"
+      :class="{ active: layerStore.resolveToolbarKey(item) === layerStore.activeKey, disabled: item === '地 闪' || item === '输电线路' }"
       type="button"
+      :disabled="item === '地 闪' || item === '输电线路'"
       @click="layerStore.handleToolbarClick(item)"
-      v-show="item != '地 闪' && item != '输电线路'"
     >
       {{ item }}
     </button>
@@ -122,6 +122,11 @@ const beijingTimeLabel = computed(() => {
   color: #ffc700;
   background-repeat: no-repeat;
   background-size: 100% 100%;
+}
+
+.tool-item.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .radar-time-switch {
