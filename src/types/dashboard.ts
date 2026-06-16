@@ -15,18 +15,17 @@ export interface ForecastDay {
 }
 
 export interface WarningCell {
-  risk: '低风险' | '中风险' | '高风险'
+  risk: '低风险' | '中风险' | '高风险' | '0' | '1' | '2'
 }
 
 export interface WarningHour {
-  time: string  // 如 "16:00"
-  risk: WarningCell['risk']
+  time: string  // 如 "14:00"
+  risk: '0' | '1' | '2'  // 0=低风险, 1=中风险, 2=高风险
 }
 
 export interface WarningRow {
   town: string
-  realtime: WarningCell
-  hours: WarningHour[]  // 未来三个小时
+  hours: WarningHour[]  // 第一个为 realtime（当前实况），其余为未来小时
 }
 
 export interface SimilarDay {

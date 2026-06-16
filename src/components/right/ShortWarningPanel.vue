@@ -11,9 +11,9 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.town">
-          <td>{{ row.town }}</td>
-          <td :class="riskClass(row.realtime.risk)">{{ row.realtime.risk }}</td>
-          <td v-for="hour in row.hours" :key="hour.time" :class="riskClass(hour.risk)">{{ hour.risk }}</td>
+          <td class="town-cell" :title="row.town"><span>{{ row.town }}</span></td>
+          <td :class="riskClass(row.hours[0]?.risk)">{{ riskText(row.hours[0]?.risk) }}</td>
+          <td v-for="hour in row.hours.slice(1)" :key="hour.time" :class="riskClass(hour.risk)">{{ riskText(hour.risk) }}</td>
         </tr>
       </tbody>
     </table>
@@ -29,19 +29,27 @@ const props = defineProps<{
   rows: WarningRow[]
 }>()
 
-// 从第一行数据的 hours 中提取未来三小时的时间标签
+// 从第一行数据的 hours（跳过第一个 realtime）中提取未来小时的时间标签
 const futureHours = computed(() => {
-  if (props.rows.length > 0 && props.rows[0].hours.length > 0) {
-    return props.rows[0].hours.map(h => h.time)
+  if (props.rows.length > 0 && props.rows[0].hours.length > 1) {
+    return props.rows[0].hours.slice(1).map(h => h.time)
   }
   return []
 })
 
-const riskClass = (risk: WarningRow['realtime']['risk']) => ({
+const riskMap: Record<string, string> = {
+  '0': '低风险',
+  '1': '中风险',
+  '2': '高风险',
+}
+
+const riskText = (risk?: string) => riskMap[risk ?? ''] ?? ''
+
+const riskClass = (risk?: string) => ({
   risk: true,
-  low: risk === '低风险',
-  middle: risk === '中风险',
-  high: risk === '高风险'
+  low: risk === '0',
+  middle: risk === '1',
+  high: risk === '2',
 })
 </script>
 
@@ -92,6 +100,15 @@ const riskClass = (risk: WarningRow['realtime']['risk']) => ({
 .warning-table th:first-child,
 .warning-table td:first-child {
   width: 18%;
+}
+
+.town-cell span {
+  display: block;
+  max-width: 4em;
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .risk.low {
