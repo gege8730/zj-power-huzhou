@@ -64,7 +64,7 @@ const fetchData = async () => {
   await getTimeList(store.timelineParams).then((response) => {
     const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
     let timeline = response.DS
-
+    console.log('原始时间列表:', timeline)
     // 根据当前选择的要素和时间跨度过滤时间列表
     if (store.isForecastMode) {
       timeline = filterForecastTimeline(timeline, duration)

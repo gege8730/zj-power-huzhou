@@ -11,6 +11,7 @@
           :key="`${item.value}-${item.color}`"
           class="legend-color"
           :style="{ backgroundColor: item.color }"
+          v-show="item.value !== -999999"
         ></span>
       </div>
     </div>
