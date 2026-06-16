@@ -15,6 +15,7 @@ declare module 'vue' {
     EChart: typeof import('./src/components/common/EChart.vue')['default']
     ElCarousel: typeof import('element-plus/es')['ElCarousel']
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
+    ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElEmpty: typeof import('element-plus/es')['ElEmpty']
     ElPopover: typeof import('element-plus/es')['ElPopover']

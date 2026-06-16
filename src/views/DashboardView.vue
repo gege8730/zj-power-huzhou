@@ -32,7 +32,6 @@ import { onMounted, ref, watch } from 'vue'
 import { getTimeList, hzSmailDay, getDqByHz, dayForecast } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
-import 'element-plus/theme-chalk/el-message.css'
 import { useLayoutStore, useMapStore } from '@/store'
 import dayjs from 'dayjs'
 

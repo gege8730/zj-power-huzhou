@@ -11,6 +11,7 @@
       :class="{ active: layerStore.resolveToolbarKey(item) === layerStore.activeKey }"
       type="button"
       @click="layerStore.handleToolbarClick(item)"
+      v-show="item != '地 闪' && item != '输电线路'"
     >
       {{ item }}
     </button>
