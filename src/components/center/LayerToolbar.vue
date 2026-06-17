@@ -1,9 +1,5 @@
 <template>
   <div class="layer-toolbar">
-    <!-- <button class="query neon-border" type="button">
-      {{ queryPlaceholder }}
-      <span class="search-icon">⌕</span>
-    </button> -->
     <div
       v-for="item in items"
       :key="item"
