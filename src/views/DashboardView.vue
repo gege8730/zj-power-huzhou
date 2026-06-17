@@ -29,7 +29,7 @@ import RightSidebar from '../components/right/RightSidebar.vue'
 import PdfPreviewDialog from '../components/common/PdfPreviewDialog.vue'
 import rawMock from '../mock/dashboard.json'
 import { onMounted, ref, watch } from 'vue'
-import { getTimeList, hzSmailDay, getDqByHz, dayForecast } from '@/api/weather'
+import { getTimeList, hzSmailDay, getDqByHz, dayForecast,getShortTermWarning } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import { useLayoutStore, useMapStore } from '@/store'
@@ -86,7 +86,17 @@ const fetchData = async () => {
     store.initTimeline(timeline)
   })
 }
+//短临告警获取
 
+const fetchWaringData = async () => {
+  const params = {
+    time: dayjs().format('YYYY-MM-DD HH:00:00'),
+    adminCode: '330500'
+  }
+  await getShortTermWarning(params).then((response) => {
+    initData.value.warning = response.DS
+  })
+}
 function filterForecastTimeline(timeline: any[], duration: string) {
   const start = parseTimelineParamTime(store.timelineParams.startTime)
   const durationHours = getDurationHours(duration)
@@ -143,6 +153,7 @@ const initAppData = async () => {
       hzSmailDay({ type: 'month' }),
       getDqByHz(),
       dayForecast({ lat: '30.894408', lon: '120.086728' }),
+      fetchWaringData()
     ])
     console.log('similarRes:', similarRes)
     console.log('dqRes:', dqRes)

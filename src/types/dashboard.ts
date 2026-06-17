@@ -22,7 +22,10 @@ export interface WarningHour {
   time: string  // 如 "14:00"
   risk: '0' | '1' | '2'  // 0=低风险, 1=中风险, 2=高风险
 }
-
+export interface WarningRow {
+  observeTime: string,
+  warning:WarningRow[]
+}
 export interface WarningRow {
   town: string
   hours: WarningHour[]  // 第一个为 realtime（当前实况），其余为未来小时
@@ -67,7 +70,7 @@ export interface DashboardMock {
   toolbar: string[]
   activeToolbar: string
   layerGroups: LayerGroup[]
-  warning: WarningRow[]
+  warning: WarningRow
   similarDays: SimilarDay[]
   materialTabs: string[]
   materialFiles: MaterialFile[]

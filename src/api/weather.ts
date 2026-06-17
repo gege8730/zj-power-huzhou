@@ -31,3 +31,7 @@ export function getWarn(params: { area: string;}) {
 export function seBiaoByCategory(params: { category: string;}) {
     return get('/api/seBiaoByCategory', params)
 }
+/**获取短临告警 */
+export function getShortTermWarning(params: { time: string; adminCode: string; }) {
+    return post('/api/strongconv/townShortWarning', params)
+}

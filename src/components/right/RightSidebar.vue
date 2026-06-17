@@ -13,7 +13,7 @@ import ShortWarningPanel from './ShortWarningPanel.vue'
 import SimilarDayPanel from './SimilarDayPanel.vue'
 
 defineProps<{
-  warning: WarningRow[]
+  warning: WarningRow
   similarDays: SimilarDay[]
   similarDate?: string
   materialTabs: string[]

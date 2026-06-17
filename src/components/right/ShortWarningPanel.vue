@@ -1,6 +1,6 @@
 <template>
   <BasePanel title="短临告警" class-name="short-warning">
-    <div class="warning-time">数据时间：{{  }}</div>
+    <div class="warning-time">数据时间：{{ rows.observeTime }}</div>
     <table class="warning-table">
       <thead>
         <tr>
@@ -10,7 +10,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in rows" :key="row.town">
+        <tr v-for="row in rows.warning" :key="row.town">
           <td class="town-cell" :title="row.town"><span>{{ row.town }}</span></td>
           <td :class="riskClass(row.hours[0]?.risk)">{{ riskText(row.hours[0]?.risk) }}</td>
           <td v-for="hour in row.hours.slice(1)" :key="hour.time" :class="riskClass(hour.risk)">{{ riskText(hour.risk) }}</td>
@@ -26,13 +26,13 @@ import type { WarningRow } from '../../types/dashboard'
 import BasePanel from '../common/BasePanel.vue'
 
 const props = defineProps<{
-  rows: WarningRow[]
+  rows: WarningRow
 }>()
 
 // 从第一行数据的 hours（跳过第一个 realtime）中提取未来小时的时间标签
 const futureHours = computed(() => {
-  if (props.rows.length > 0 && props.rows[0].hours.length > 1) {
-    return props.rows[0].hours.slice(1).map(h => h.time)
+  if (props.rows.warning.length > 0 && props.rows.warning[0].hours.length > 1) {
+    return props.rows.warning[0].hours.slice(1).map(h => h.time)
   }
   return []
 })
