@@ -78,7 +78,9 @@ const props = defineProps<{
 .map-stage :deep(.control-groups),
 .map-stage :deep(.layer-toolbar),
 .map-stage :deep(.time-axis),
-.map-stage :deep(.map-bottom-tabs) {
+.map-stage :deep(.map-bottom-tabs),
+.map-stage :deep(.radar-time-switch),
+.map-stage :deep(.electric-line-legend) {
   transition: left var(--layout-transition), right var(--layout-transition), width var(--layout-transition), transform var(--layout-transition), opacity var(--layout-transition);
 }
 

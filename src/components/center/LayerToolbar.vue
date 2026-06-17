@@ -4,20 +4,55 @@
       {{ queryPlaceholder }}
       <span class="search-icon">⌕</span>
     </button> -->
-    <button
+    <div
       v-for="item in items"
       :key="item"
-      class="tool-item"
-      :class="{ active: layerStore.resolveToolbarKey(item) === layerStore.activeKey, disabled: item === '地 闪' || item === '输电线路' }"
-      type="button"
-      :disabled="item === '地 闪' || item === '输电线路'"
-      @click="layerStore.handleToolbarClick(item)"
+      class="tool-wrapper"
+      @mouseenter="handleToolMouseEnter(item)"
+      @mouseleave="handleToolMouseLeave(item)"
     >
-      {{ item }}
-    </button>
+      <button
+        class="tool-item"
+        :class="{ active: layerStore.isToolbarActive(layerStore.resolveToolbarKey(item)), disabled: isDisabledItem(item) }"
+        type="button"
+        :disabled="isDisabledItem(item)"
+        @click="layerStore.handleToolbarClick(item)"
+      >
+        {{ item }}
+      </button>
+
+      <div
+        v-if="isElectricLineItem(item) && electricLineMenuVisible"
+        class="electric-line-submenu"
+        @mouseenter="electricLineMenuVisible = true"
+        @click.stop
+      >
+        <button
+          class="electric-line-option tower-option"
+          type="button"
+          :class="{ checked: layerStore.electricLineTowerChecked }"
+          @click.stop="layerStore.toggleElectricLineTower"
+        >
+          <span class="line-checkbox" :class="{ checked: layerStore.electricLineTowerChecked }"></span>
+          <span>杆塔</span>
+        </button>
+        <div class="electric-line-option-divider"></div>
+        <button
+          v-for="option in layerStore.electricLineCategoryOptions"
+          :key="option.key"
+          class="electric-line-option"
+          type="button"
+          :class="{ checked: layerStore.isElectricLineCategoryChecked(option.key) }"
+          @click.stop="layerStore.toggleElectricLineCategory(option.key)"
+        >
+          <span class="line-checkbox" :class="{ checked: layerStore.isElectricLineCategoryChecked(option.key) }"></span>
+          <span>{{ option.label }}</span>
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div v-if="layerStore.isRadarActive && layerStore.radarImages.length" class="radar-time-switch">
+  <div v-if="layerStore.isRadarActive && layerStore.radarImages.length" class="radar-time-switch radar-time">
     <button
         class="time-arrow"
         type="button"
@@ -36,10 +71,30 @@
         <ArrowRightBold />
       </button>
   </div>
+
+  <div
+    v-if="layerStore.isElectricLineActive && layerStore.currentElectricLineLabel"
+    class="radar-time-switch electric-line-time"
+    :class="{ 'below-radar-time': layerStore.isRadarActive && layerStore.radarImages.length }"
+  >
+    <span class="time-label">{{ layerStore.currentElectricLineLabel }}</span>
+  </div>
+
+  <div v-if="layerStore.electricLineLegendVisible" class="electric-line-legend">
+    <div class="electric-line-legend-title">输电线路图例</div>
+    <div class="electric-line-legend-row">
+      <span class="legend-swatch icing"></span>
+      <span>覆冰</span>
+    </div>
+    <div class="electric-line-legend-row">
+      <span class="legend-swatch normal"></span>
+      <span>未覆冰</span>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { useLayerToolbarStore } from '@/store'
@@ -51,6 +106,7 @@ defineProps<{
 }>()
 
 const layerStore = useLayerToolbarStore()
+const electricLineMenuVisible = ref(false)
 
 const beijingTimeLabel = computed(() => {
   const utcLabel = layerStore.currentRadarLabel
@@ -61,6 +117,21 @@ const beijingTimeLabel = computed(() => {
   const beijingTime = dayjs().date(parseInt(day)).hour(parseInt(hour)).minute(parseInt(minute)).add(8, 'hour')
   return `${beijingTime.format('DD日HH时mm分')}雷达`
 })
+
+const isElectricLineItem = (name: string) => layerStore.resolveToolbarKey(name) === 'line'
+const isDisabledItem = (name: string) => layerStore.resolveToolbarKey(name) === 'lightning'
+
+const handleToolMouseEnter = (name: string) => {
+  if (isElectricLineItem(name)) {
+    electricLineMenuVisible.value = true
+  }
+}
+
+const handleToolMouseLeave = (name: string) => {
+  if (isElectricLineItem(name)) {
+    electricLineMenuVisible.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -72,7 +143,13 @@ const beijingTimeLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(0.45rem, 1vh, 0.7rem);
-  z-index: 4;
+  z-index: 60;
+  pointer-events: auto;
+}
+
+.tool-wrapper {
+  position: relative;
+  width: 100%;
 }
 
 .tool-item {
@@ -129,6 +206,78 @@ const beijingTimeLabel = computed(() => {
   cursor: not-allowed;
 }
 
+.electric-line-submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  width: clamp(8.4rem, 9.2vw, 10.8rem);
+  padding: clamp(0.45rem, 0.72vh, 0.6rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.35rem, 0.58vh, 0.5rem);
+  background: rgba(0, 57, 103, 0.9);
+  border-top-left-radius: .37037037vh;
+  border-top-right-radius: .37037037vh;
+  border-bottom-left-radius: .20833333vw;
+  border-bottom-right-radius: .20833333vw;
+  border: 1px solid #336ec799;
+  box-shadow: inset 1px 0 #67a3ff;
+  box-sizing: border-box;
+  z-index: 80;
+  pointer-events: auto;
+}
+
+.electric-line-option {
+  width: 100%;
+  min-height: clamp(1.55rem, 2.35vh, 1.9rem);
+  padding: 0 clamp(0.35rem, 0.45vw, 0.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(50, 166, 255, 0.24);
+  border-radius: 0.16rem;
+  color: #d8f2ff;
+  background: rgba(0, 40, 86, 0.62);
+  font-size: clamp(0.68rem, 0.68vw, 0.82rem);
+  text-align: left;
+  cursor: pointer;
+}
+
+.electric-line-option-divider {
+  height: 1px;
+  margin: 0.08rem 0;
+  background: rgba(103, 163, 255, 0.26);
+}
+
+.electric-line-option:hover,
+.electric-line-option.checked {
+  color: #fff9c7;
+  background: rgba(17, 118, 200, 0.7);
+  border-color: rgba(93, 214, 255, 0.62);
+}
+
+.line-checkbox {
+  position: relative;
+  width: 0.78rem;
+  height: 0.78rem;
+  flex: 0 0 0.78rem;
+  border: 1px solid #1dbdff;
+  background: rgba(0, 42, 89, 0.8);
+}
+
+.line-checkbox.checked {
+  background: #1295ff;
+}
+
+.line-checkbox.checked::after {
+  content: "✓";
+  position: absolute;
+  left: 0.05rem;
+  top: -0.35rem;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
 .radar-time-switch {
   position: absolute;
   right: 0;
@@ -151,6 +300,15 @@ const beijingTimeLabel = computed(() => {
   text-shadow: 0 0 0.45rem rgba(49, 200, 255, 0.72);
   white-space: nowrap;
   z-index: 8;
+}
+
+.electric-line-time {
+  min-width: clamp(11.6rem, 13vw, 15.5rem);
+  color: #fff5c7;
+}
+
+.electric-line-time.below-radar-time {
+  top: clamp(5rem, 8.3vh, 7.8rem);
 }
 
 .time-arrow {
@@ -176,5 +334,58 @@ const beijingTimeLabel = computed(() => {
   flex: 1;
   text-align: center;
   letter-spacing: 0.03em;
+}
+
+.electric-line-legend {
+  position: absolute;
+  right: 1.2%;
+  bottom: clamp(3.3rem, 6.9vh, 4.9rem);
+  min-width: clamp(8.2rem, 8.4vw, 10.2rem);
+  padding: clamp(0.55rem, 0.85vh, 0.76rem) clamp(0.62rem, 0.78vw, 0.9rem);
+  background: rgba(0, 57, 103, 0.9);
+  border-top-left-radius: .37037037vh;
+  border-top-right-radius: .37037037vh;
+  border-bottom-left-radius: .20833333vw;
+  border-bottom-right-radius: .20833333vw;
+  border: 1px solid #336ec799;
+  box-shadow: inset 1px 0 #67a3ff;
+  box-sizing: border-box;
+  color: #e7f8ff;
+  z-index: 8;
+}
+
+.electric-line-legend-title {
+  margin-bottom: clamp(0.35rem, 0.55vh, 0.5rem);
+  color: #fff;
+  font-size: clamp(0.72rem, 0.74vw, 0.88rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-shadow: none;
+}
+
+.electric-line-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: clamp(1.35rem, 2vh, 1.6rem);
+  font-size: clamp(0.68rem, 0.7vw, 0.86rem);
+  white-space: nowrap;
+}
+
+.legend-swatch {
+  width: clamp(1.45rem, 1.6vw, 1.9rem);
+  height: 0.24rem;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.legend-swatch.icing {
+  color: rgb(255, 0, 0);
+  background: rgb(255, 0, 0);
+}
+
+.legend-swatch.normal {
+  color: rgb(60, 255, 250);
+  background: rgb(60, 255, 250);
 }
 </style>

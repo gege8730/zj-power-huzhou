@@ -37,5 +37,5 @@ export function getShortTermWarning(params: { time: string; adminCode: string; }
 }
 /**获取输电线路覆冰分布图 */
 export function getElectricLine() {
-    return post('/api/hzElectricLine')
+    return get('/api/hzElectricLine')
 }
