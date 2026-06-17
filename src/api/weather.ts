@@ -35,3 +35,7 @@ export function seBiaoByCategory(params: { category: string;}) {
 export function getShortTermWarning(params: { time: string; adminCode: string; }) {
     return post('/api/strongconv/townShortWarning', params)
 }
+/**获取输电线路覆冰分布图 */
+export function getElectricLine() {
+    return post('/api/hzElectricLine')
+}
