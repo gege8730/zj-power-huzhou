@@ -1,5 +1,9 @@
 <template>
-  <div v-if="legendItems.length" class="legend-wrap">
+  <div
+    v-if="legendItems.length"
+    class="legend-wrap"
+    :class="{ 'with-electric-line-legend': layerStore.electricLineLegendVisible }"
+  >
     <div class="legend-unit">{{ legendUnit }}</div>
     <div class="legend-body">
       <div class="legend-labels">
@@ -20,9 +24,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useMapStore } from '@/store'
+import { useLayerToolbarStore, useMapStore } from '@/store'
 
 const store = useMapStore()
+const layerStore = useLayerToolbarStore()
 
 const legendItems = computed(() => {
   const stops = store.mapRenderData.colorConfig?.stops || []
@@ -52,6 +57,11 @@ const formatValue = (value: number) => Number.isInteger(value) ? String(value) :
   border: 1px solid rgba(56, 152, 238, 0.35);
   box-shadow: inset 0 0 1.1rem rgba(44, 132, 226, 0.22), 0 0 0.9rem rgba(0, 18, 45, 0.45); */
   box-sizing: border-box;
+  transition: transform 0.22s ease;
+}
+
+.legend-wrap.with-electric-line-legend {
+  transform: translateY(calc(-1 * clamp(5.2rem, 10vh, 7.2rem)));
 }
 
 .legend-unit {
