@@ -6,6 +6,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { fromLonLat } from 'ol/proj';
 import {
     ZJQXOpenLayersMap as ZJQXMap,
     ZJQXOpenLayersGridFieldLayer as ZJQXGridFieldLayer,
@@ -28,6 +29,7 @@ const mapContainer = ref<HTMLElement | null>(null);
 let zjqxMap: InstanceType<typeof ZJQXMap> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
+const INITIAL_MAP_CENTER: [number, number] = [30.7541, 119.786];
 const NORMAL_MAP_ZOOM = 9.3;
 const FULLSCREEN_MAP_ZOOM = 10;
 const MAP_ZOOM_ANIMATION_DURATION = 260;
@@ -65,11 +67,20 @@ const setMapZoom = (zoom: number, animate = true) => {
     const view = getOpenLayersView() as any
     if (!view) return
 
+    const center = fromLonLat([INITIAL_MAP_CENTER[1], INITIAL_MAP_CENTER[0]])
+
     if (animate && typeof view.animate === 'function') {
-        view.animate({ zoom, duration: MAP_ZOOM_ANIMATION_DURATION })
+        view.animate({
+            center,
+            zoom,
+            duration: MAP_ZOOM_ANIMATION_DURATION,
+        })
         return
     }
 
+    if (typeof view.setCenter === 'function') {
+        view.setCenter(center)
+    }
     if (typeof view.setZoom === 'function') {
         view.setZoom(zoom)
     }
@@ -92,7 +103,7 @@ onMounted(async () => {
     try {
         // 初始化地图
         zjqxMap = ZJQXMap.initMap('map', {
-            center: [30.7541, 119.786],
+            center: INITIAL_MAP_CENTER,
             zoom: NORMAL_MAP_ZOOM,
             maxZoom: 15.5,
             minZoom: 7.5,
