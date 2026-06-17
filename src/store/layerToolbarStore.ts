@@ -85,7 +85,6 @@ export const ELECTRIC_LINE_CATEGORY_OPTIONS: ElectricLineCategoryOption[] = [
 const ELECTRIC_LINE_NORMAL_COLOR = 'rgb(60, 255, 250)'
 const ELECTRIC_LINE_ICE_COLOR = 'rgb(255, 0, 0)'
 const ELECTRIC_LINE_TOWER_ZOOM = 10.5
-const ELECTRIC_LINE_SAMPLE_URL = `${import.meta.env.VITE_APP_BASE_URL || '/'}sample/electric-line.json`.replace(/([^:]\/)\/+/, '$1')
 
 const ELECTRIC_LINE_NORMAL_STYLE = new Style({
   stroke: new Stroke({
@@ -433,21 +432,14 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     electricLineLoading.value = true
     try {
       const response = await getElectricLine()
-      const list = normalizeElectricLineResponse(response.DS)
+      const list = normalizeElectricLineResponse(response)
       electricLineData.value = list
       return list
     } catch (error) {
-      console.error('输电线路接口加载失败，尝试读取本地示例数据:', error)
-      try {
-        const list = await fetchElectricLineSample()
-        electricLineData.value = list
-        return list
-      } catch (sampleError) {
-        console.error('输电线路示例数据加载失败:', sampleError)
-        electricLineData.value = []
-        ElMessage.error('输电线路数据加载失败')
-        return []
-      }
+      console.error('输电线路接口加载失败:', error)
+      electricLineData.value = []
+      ElMessage.error('输电线路数据加载失败')
+      return []
     } finally {
       electricLineLoading.value = false
     }
@@ -547,15 +539,65 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
 })
 
 function formatRadarTime(value?: string) {
-  if (!value) return ''
-  const parsed = dayjs(value, 'YYYYMMDDHHmmssZ')
-  return parsed.isValid() ? parsed.format('MM月DD日 HH时mm分') : value
+  const time = parseCompactDateTime(value)
+  if (!time) return ''
+  return `${time.month}月${time.day}日 ${time.hour}时${time.minute}分 雷达分布图`
 }
 
 function formatElectricLineTime(value?: string) {
-  const time = String(value || '').replace(/\D/g, '')
-  if (time.length < 12) return ''
-  return `${time.slice(8, 10)}时${time.slice(10, 12)}分 覆冰分布图`
+  const time = parseCompactDateTime(value)
+  if (!time) return ''
+  return `${time.month}月${time.day}日 ${time.hour}时${time.minute}分 覆冰分布图`
+}
+
+function parseCompactDateTime(value?: string) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+
+  const zoneMatch = raw.match(/(Z|[+-]\d{2}:?\d{2})$/i)
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length < 12) return null
+
+  const year = Number(digits.slice(0, 4))
+  const month = Number(digits.slice(4, 6))
+  const day = Number(digits.slice(6, 8))
+  const hour = Number(digits.slice(8, 10))
+  const minute = Number(digits.slice(10, 12))
+  const second = digits.length >= 14 ? Number(digits.slice(12, 14)) : 0
+
+  if ([year, month, day, hour, minute, second].some((item) => Number.isNaN(item))) return null
+
+  if (zoneMatch) {
+    const zone = zoneMatch[1].toUpperCase()
+    const offsetMinute = zone === 'Z' ? 0 : parseTimezoneOffset(zone)
+    const utcTime = Date.UTC(year, month - 1, day, hour, minute, second) - offsetMinute * 60 * 1000
+    const beijingTime = new Date(utcTime + 8 * 60 * 60 * 1000)
+    return {
+      month: pad2(beijingTime.getUTCMonth() + 1),
+      day: pad2(beijingTime.getUTCDate()),
+      hour: pad2(beijingTime.getUTCHours()),
+      minute: pad2(beijingTime.getUTCMinutes()),
+    }
+  }
+
+  return {
+    month: pad2(month),
+    day: pad2(day),
+    hour: pad2(hour),
+    minute: pad2(minute),
+  }
+}
+
+function parseTimezoneOffset(zone: string) {
+  const sign = zone.startsWith('-') ? -1 : 1
+  const clean = zone.replace(':', '')
+  const hour = Number(clean.slice(1, 3))
+  const minute = Number(clean.slice(3, 5))
+  return sign * (hour * 60 + minute)
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, '0')
 }
 
 function normalizeElectricLineResponse(payload: any): ElectricLineItem[] {
@@ -567,13 +609,6 @@ function normalizeElectricLineResponse(payload: any): ElectricLineItem[] {
       time: item.time ? String(item.time) : '',
       data: item.data,
     }))
-}
-
-async function fetchElectricLineSample() {
-  const response = await fetch(ELECTRIC_LINE_SAMPLE_URL)
-  if (!response.ok) throw new Error(`Failed to load ${ELECTRIC_LINE_SAMPLE_URL}: ${response.status}`)
-  const data = await response.json()
-  return normalizeElectricLineResponse(data)
 }
 
 function createElectricLineFeatures(

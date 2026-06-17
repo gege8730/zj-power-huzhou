@@ -61,7 +61,7 @@
       >
         <ArrowLeftBold />
       </button>
-      <span class="time-label">{{ beijingTimeLabel }}</span>
+      <span class="time-label">{{ layerStore.currentRadarLabel }}</span>
       <button
         class="time-arrow"
         type="button"
@@ -94,9 +94,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
-import dayjs from 'dayjs'
 import { useLayerToolbarStore } from '@/store'
 
 defineProps<{
@@ -107,16 +106,6 @@ defineProps<{
 
 const layerStore = useLayerToolbarStore()
 const electricLineMenuVisible = ref(false)
-
-const beijingTimeLabel = computed(() => {
-  const utcLabel = layerStore.currentRadarLabel
-  if (!utcLabel) return ''
-  const match = utcLabel.match(/(\d{2})日(\d{2})时(\d{2})分雷达/)
-  if (!match) return utcLabel
-  const [, day, hour, minute] = match
-  const beijingTime = dayjs().date(parseInt(day)).hour(parseInt(hour)).minute(parseInt(minute)).add(8, 'hour')
-  return `${beijingTime.format('DD日HH时mm分')}雷达`
-})
 
 const isElectricLineItem = (name: string) => layerStore.resolveToolbarKey(name) === 'line'
 const isDisabledItem = (name: string) => layerStore.resolveToolbarKey(name) === 'lightning'
@@ -282,20 +271,21 @@ const handleToolMouseLeave = (name: string) => {
   position: absolute;
   right: 0;
   top: clamp(2.7rem, 4.7vh, 5.1rem);
-  min-width: clamp(10.6rem, 12vw, 14rem);
-  height: clamp(2rem, 3vh, 2.35rem);
-  display: flex;
+  width:clamp(17.4rem, 16vw, 16.2rem);
+  min-width: 0;
+  height: clamp(1.86rem, 2.65vh, 2.18rem);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.45rem, 0.6vw, 0.65rem);
-  padding: 0 clamp(0.55rem, 0.8vw, 0.85rem);
+  gap: clamp(0.12rem, 0.18vw, 0.24rem);
+  padding: 0 clamp(0.22rem, 0.32vw, 0.36rem);
   background: linear-gradient(90deg, rgba(0, 57, 103, 0.24), rgba(12, 120, 212, 0.92), rgba(0, 57, 103, 0.24));
   border: 1px solid rgba(49, 200, 255, 0.32);
   box-shadow:
     inset 0 0 0.75rem rgba(49, 200, 255, 0.22),
     0 0 1rem rgba(12, 120, 212, 0.26);
   color: #dff8ff;
-  font-size: clamp(0.82rem, 0.88vw, 1.08rem);
+  font-size: clamp(0.78rem, 0.78vw, 0.92rem);
   font-weight: 500;
   text-shadow: 0 0 0.45rem rgba(49, 200, 255, 0.72);
   white-space: nowrap;
@@ -303,24 +293,23 @@ const handleToolMouseLeave = (name: string) => {
 }
 
 .electric-line-time {
-  min-width: clamp(11.6rem, 13vw, 15.5rem);
   color: #fff5c7;
 }
 
 .electric-line-time.below-radar-time {
-  top: clamp(5rem, 8.3vh, 7.8rem);
+  top: clamp(5.35rem, 8.9vh, 8.35rem);
 }
 
 .time-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(1.4rem, 1.6vw, 1.7rem);
+  width: clamp(1.05rem, 1.3vw, 3.24rem);
   height: 100%;
   border: 0;
   background: transparent;
   color: #fff;
-  font-size: clamp(1.5rem, 1.6vw, 1.8rem);
+  font-size: clamp(1.12rem, 1.16vw, 1.34rem);
   cursor: pointer;
   text-shadow: 0 0 0.3rem rgba(255, 255, 255, 0.8);
 }
@@ -331,9 +320,14 @@ const handleToolMouseLeave = (name: string) => {
 }
 
 .time-label {
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 0;
   text-align: center;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
+}
+
+.electric-line-time .time-label {
+  flex: 1 1 auto;
 }
 
 .electric-line-legend {

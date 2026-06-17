@@ -94,7 +94,7 @@ onMounted(async () => {
         zjqxMap = ZJQXMap.initMap('map', {
             center: [30.7541, 119.786],
             zoom: NORMAL_MAP_ZOOM,
-            maxZoom: 14.5,
+            maxZoom: 15.5,
             minZoom: 7.5,
             controls: false,
             baseLayer: {
