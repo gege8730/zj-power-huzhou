@@ -59,8 +59,55 @@ onUnmounted(() => {
     linear-gradient(180deg, rgba(7, 62, 106, 0.86), rgba(7, 28, 62, 0.2));
   background-size: 100% 100%;  /* 同时作用于两个背景 */
   background-repeat: no-repeat;
+  overflow: hidden;
   z-index: 2;
 }
+
+.top-header::before {
+  content: "";
+  position: absolute;
+  left: 25%;
+  top: 0;
+  width: 150%;
+  height: 94%;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 43%,
+    rgba(141, 233, 255, 0.46) 50%,
+    rgba(255, 255, 255, 0.16) 56%,
+    transparent 67%,
+    transparent 100%
+  );
+  background-size: 230% 100%;
+  background-position: 135% 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 1;
+  animation: title-highlight-sweep 4.6s ease-in-out infinite;
+}
+
+@keyframes title-highlight-sweep {
+  0%,
+  18% {
+    opacity: 0;
+    background-position: 135% 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 0.95;
+    background-position: -135% 0;
+  }
+  100% {
+    opacity: 0;
+    background-position: -135% 0;
+  }
+}
+
 .date-block {
   width: clamp(6rem, 6.4vw, 8rem);
   margin-left: clamp(2rem, 3.8vw, 4.6rem);
