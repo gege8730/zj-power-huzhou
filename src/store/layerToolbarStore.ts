@@ -390,7 +390,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
         // Radar image servers may not send CORS headers; loading without CORS mode
         // keeps the image drawable on the map instead of failing the request.
       }),
-      opacity: 0.86,
+      opacity: 0.8,
       zIndex: 430,
     })
     map.addLayer(radarLayer)
