@@ -1,5 +1,5 @@
 <template>
-  <div v-if="warningStore.sortedWarnings.length" class="warning-notice" :class="{ 'below-radar': showBelowRadar }">
+  <div v-if="warningStore.sortedWarnings.length" class="warning-notice" :class="noticePositionClass">
     <div v-if="warningStore.sortedWarnings.length <= 2" class="warning-page">
       <button
         v-for="item in warningStore.sortedWarnings"
@@ -106,7 +106,19 @@ import { useLayerToolbarStore, useWarningStore } from '@/store'
 const warningStore = useWarningStore()
 const layerStore = useLayerToolbarStore()
 
-const showBelowRadar = computed(() => layerStore.isRadarActive && layerStore.radarImages.length > 0)
+const layerTimeRowCount = computed(() => {
+  let count = 0
+  if (layerStore.isRadarActive && layerStore.radarImages.length > 0) count += 1
+  if (layerStore.isElectricLineActive && layerStore.currentElectricLineLabel) count += 1
+  if (layerStore.isLightningActive && layerStore.currentLightningLabel) count += 1
+  return count
+})
+
+const noticePositionClass = computed(() => ({
+  'below-one-layer-time': layerTimeRowCount.value === 1,
+  'below-two-layer-times': layerTimeRowCount.value >= 2,
+  'below-three-layer-times': layerTimeRowCount.value >= 3,
+}))
 
 onMounted(() => {
   warningStore.loadWarnings()
@@ -130,8 +142,16 @@ function formatTime(time?: string) {
   transition: top 0.18s ease;
 }
 
-.warning-notice.below-radar {
+.warning-notice.below-one-layer-time {
   top: clamp(5rem, 8.2vh, 7.9rem);
+}
+
+.warning-notice.below-two-layer-times {
+  top: clamp(7.65rem, 12.4vh, 11.2rem);
+}
+
+.warning-notice.below-three-layer-times {
+  top: clamp(10.3rem, 16.6vh, 14.9rem);
 }
 
 .warning-page {

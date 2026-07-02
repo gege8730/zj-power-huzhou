@@ -48,7 +48,7 @@
     </div>
   </div>
 
-  <div v-if="layerStore.isRadarActive && layerStore.radarImages.length" class="radar-time-switch radar-time">
+  <div v-if="hasRadarTime" class="radar-time-switch radar-time layer-time-row-0">
     <button
         class="time-arrow"
         type="button"
@@ -69,11 +69,19 @@
   </div>
 
   <div
-    v-if="layerStore.isElectricLineActive && layerStore.currentElectricLineLabel"
+    v-if="hasElectricLineTime"
     class="radar-time-switch electric-line-time"
-    :class="{ 'below-radar-time': layerStore.isRadarActive && layerStore.radarImages.length }"
+    :class="electricLineTimeClass"
   >
     <span class="time-label">{{ layerStore.currentElectricLineLabel }}</span>
+  </div>
+
+  <div
+    v-if="hasLightningTime"
+    class="radar-time-switch lightning-time"
+    :class="lightningTimeClass"
+  >
+    <span class="time-label">{{ layerStore.currentLightningLabel }}</span>
   </div>
 
   <div v-if="layerStore.electricLineLegendVisible" class="electric-line-legend">
@@ -90,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
 import { useLayerToolbarStore } from '@/store'
 
@@ -103,8 +111,19 @@ defineProps<{
 const layerStore = useLayerToolbarStore()
 const electricLineMenuVisible = ref(false)
 
+const hasRadarTime = computed(() => layerStore.isRadarActive && layerStore.radarImages.length > 0)
+const hasElectricLineTime = computed(() => layerStore.isElectricLineActive && !!layerStore.currentElectricLineLabel)
+const hasLightningTime = computed(() => layerStore.isLightningActive && !!layerStore.currentLightningLabel)
+
+const electricLineTimeClass = computed(() => getLayerTimeRowClass(hasRadarTime.value ? 1 : 0))
+const lightningTimeClass = computed(() => getLayerTimeRowClass((hasRadarTime.value ? 1 : 0) + (hasElectricLineTime.value ? 1 : 0)))
+
 const isElectricLineItem = (name: string) => layerStore.resolveToolbarKey(name) === 'line'
-const isDisabledItem = (name: string) => layerStore.resolveToolbarKey(name) === 'lightning'
+const isDisabledItem = (_name: string) => false
+
+function getLayerTimeRowClass(rowIndex: number) {
+  return `layer-time-row-${Math.min(rowIndex, 2)}`
+}
 
 const handleToolMouseEnter = (name: string) => {
   if (isElectricLineItem(name)) {
@@ -266,7 +285,6 @@ const handleToolMouseLeave = (name: string) => {
 .radar-time-switch {
   position: absolute;
   right: 0;
-  top: clamp(2.7rem, 4.7vh, 5.1rem);
   width:clamp(17.4rem, 16vw, 16.2rem);
   min-width: 0;
   height: clamp(1.86rem, 2.65vh, 2.18rem);
@@ -288,12 +306,24 @@ const handleToolMouseLeave = (name: string) => {
   z-index: 8;
 }
 
+.layer-time-row-0 {
+  top: clamp(2.7rem, 4.7vh, 5.1rem);
+}
+
+.layer-time-row-1 {
+  top: clamp(5.35rem, 8.9vh, 8.35rem);
+}
+
+.layer-time-row-2 {
+  top: clamp(8rem, 13.1vh, 11.6rem);
+}
+
 .electric-line-time {
   color: #fff5c7;
 }
 
-.electric-line-time.below-radar-time {
-  top: clamp(5.35rem, 8.9vh, 8.35rem);
+.lightning-time {
+  color: #fff;
 }
 
 .time-arrow {
@@ -322,7 +352,8 @@ const handleToolMouseLeave = (name: string) => {
   letter-spacing: 0.01em;
 }
 
-.electric-line-time .time-label {
+.electric-line-time .time-label,
+.lightning-time .time-label {
   flex: 1 1 auto;
 }
 

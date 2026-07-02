@@ -6,6 +6,7 @@ import LineString from 'ol/geom/LineString.js'
 import Point from 'ol/geom/Point.js'
 import ImageLayer from 'ol/layer/Image.js'
 import VectorLayer from 'ol/layer/Vector.js'
+import Overlay from 'ol/Overlay.js'
 import ImageStatic from 'ol/source/ImageStatic.js'
 import VectorSource from 'ol/source/Vector.js'
 import OlMap from 'ol/Map.js'
@@ -13,9 +14,11 @@ import { fromLonLat, transformExtent } from 'ol/proj.js'
 import Style from 'ol/style/Style.js'
 import Stroke from 'ol/style/Stroke.js'
 import Icon from 'ol/style/Icon.js'
+import Fill from 'ol/style/Fill.js'
+import Text from 'ol/style/Text.js'
 import { ElMessage } from 'element-plus'
 import { unByKey } from 'ol/Observable.js'
-import { getElectricLine, radarList } from '@/api/weather'
+import { getElectricLine, getThunderList, radarList } from '@/api/weather'
 import towerIconUrl from '@/assets/gt2.png'
 
 /** 图层工具栏类型 */
@@ -30,6 +33,18 @@ export interface RadarImageItem {
   Url: string
   FileFormat: string
   FileName: string
+}
+
+/** 地闪接口返回单个落点 */
+export interface LightningItem {
+  FLASHFLAG?: string | number
+  Lon?: string | number
+  Lat?: string | number
+  Datetime?: string
+  Lit_Prov?: string
+  Lit_City?: string
+  Lit_Cnty?: string
+  [key: string]: any
 }
 
 /** 输电线路接口返回单个点 */
@@ -85,6 +100,7 @@ export const ELECTRIC_LINE_CATEGORY_OPTIONS: ElectricLineCategoryOption[] = [
 const ELECTRIC_LINE_NORMAL_COLOR = 'rgb(60, 255, 250)'
 const ELECTRIC_LINE_ICE_COLOR = 'rgb(255, 0, 0)'
 const ELECTRIC_LINE_TOWER_ZOOM = 10.5
+const LIGHTNING_CITY = '湖州市'
 
 const ELECTRIC_LINE_NORMAL_STYLE = new Style({
   stroke: new Stroke({
@@ -111,6 +127,26 @@ const ELECTRIC_LINE_TOWER_STYLE = new Style({
   }),
 })
 
+const LIGHTNING_POSITIVE_STYLE = new Style({
+  text: new Text({
+    text: '+',
+    font: '900 28px Arial, "Microsoft YaHei", sans-serif',
+    fill: new Fill({ color: '#fff45c' }),
+    stroke: new Stroke({ color: '#ff2d2d', width: 4 }),
+    offsetY: -1,
+  }),
+})
+
+const LIGHTNING_NEGATIVE_STYLE = new Style({
+  text: new Text({
+    text: '-',
+    font: '900 32px Arial, "Microsoft YaHei", sans-serif',
+    fill: new Fill({ color: '#e9fbff' }),
+    stroke: new Stroke({ color: '#00a6ff', width: 4 }),
+    offsetY: -2,
+  }),
+})
+
 export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   /** 当前激活图层集合：雷达、地闪、输电线路允许同时叠加 */
   const activeKeys = ref<LayerToolbarKey[]>([])
@@ -130,6 +166,15 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   /** 雷达图层加载状态 */
   const radarLoading = ref(false)
 
+  /** 地闪落点数据 */
+  const lightningData = ref<LightningItem[]>([])
+
+  /** 地闪图层加载状态 */
+  const lightningLoading = ref(false)
+
+  /** 地闪标题时间 */
+  const lightningTitleTime = ref('')
+
   /** 输电线路数据 */
   const electricLineData = ref<ElectricLineItem[]>([])
 
@@ -145,8 +190,20 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   /** 雷达图层缓存，切换时次只替换当前图片图层 */
   let radarLayer: ImageLayer<ImageStatic> | null = null
 
+  /** 地闪图层缓存 */
+  let lightningLayer: VectorLayer<VectorSource<Feature>> | null = null
+
+  /** 地闪悬浮信息框 */
+  let lightningTooltipOverlay: Overlay | null = null
+
+  /** 地闪悬浮监听 */
+  let lightningPointerMoveListenerKey: any = null
+
   /** 输电线路图层缓存 */
   let electricLineLayer: VectorLayer<VectorSource<Feature>> | null = null
+
+  /** 地闪渲染令牌，避免快速切换时旧请求覆盖新状态 */
+  let lightningRenderToken = 0
 
   /** 输电线路渲染令牌，避免快速切换时旧请求覆盖新状态 */
   let electricLineRenderToken = 0
@@ -165,6 +222,10 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     return radar ? `${radar.Url}${radar.FileName}` : ''
   })
   const currentRadarLabel = computed(() => formatRadarTime(currentRadar.value?.FileTime))
+  const currentLightningLabel = computed(() => {
+    if (!lightningData.value.length || !lightningTitleTime.value) return ''
+    return formatLightningTime(lightningTitleTime.value)
+  })
   const currentElectricLineLabel = computed(() => formatElectricLineTime(electricLineData.value[0]?.time))
 
   function resolveToolbarKey(name: string): LayerToolbarKey | '' {
@@ -190,6 +251,11 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     if (key === 'radar') {
       removeRadarLayer()
       radarLoading.value = false
+    } else if (key === 'lightning') {
+      removeLightningLayer()
+      lightningData.value = []
+      lightningTitleTime.value = ''
+      lightningLoading.value = false
     } else if (key === 'line') {
       removeElectricLineLayer()
       resetElectricLineSelection()
@@ -201,12 +267,14 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   function setMap(map: OpenLayersMapLike | null) {
     if (!map) {
       removeRadarLayer()
+      removeLightningLayer()
       removeElectricLineLayer()
       unbindElectricLineZoomListener()
     }
     mapInstance.value = map
     if (map) bindElectricLineZoomListener()
     if (map && isRadarActive.value && currentRadarUrl.value) renderRadarLayer()
+    if (map && isLightningActive.value && lightningData.value.length) renderLightningLayer()
     if (map && isElectricLineActive.value && electricLineSelectedCategories.value.length) {
       void renderElectricLineLayer()
     }
@@ -241,11 +309,6 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
       return
     }
 
-    if (key === 'lightning') {
-      // 地闪功能暂未实现，先保持不可选，避免出现空状态。
-      return
-    }
-
     if (isToolbarActive(key)) {
       closeToolbarLayer(key)
       return
@@ -255,6 +318,11 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
 
     if (key === 'radar') {
       await loadRadarImages()
+      return
+    }
+
+    if (key === 'lightning') {
+      await renderLightningLayer()
       return
     }
 
@@ -319,7 +387,8 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
       source: new ImageStatic({
         url: currentRadarUrl.value,
         imageExtent: transformExtent(RADAR_IMAGE_EXTENT_4326, 'EPSG:4326', map.getView().getProjection()),
-        crossOrigin: 'anonymous',
+        // Radar image servers may not send CORS headers; loading without CORS mode
+        // keeps the image drawable on the map instead of failing the request.
       }),
       opacity: 0.86,
       zIndex: 430,
@@ -349,6 +418,137 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   function nextRadar() {
     if (radarIndex.value >= radarImages.value.length - 1) return
     setRadarIndex(radarIndex.value + 1)
+  }
+
+  async function loadLightningData() {
+    lightningLoading.value = true
+    lightningData.value = []
+    try {
+      const response = await getThunderList({ litCity: LIGHTNING_CITY })
+      const list = normalizeLightningResponse(response)
+      lightningData.value = list
+      lightningTitleTime.value = dayjs().format('YYYY-MM-DD HH:00:00')
+      return list
+    } catch (error) {
+      console.error('地闪数据加载失败:', error)
+      lightningData.value = []
+      lightningTitleTime.value = ''
+      ElMessage.error('地闪数据加载失败')
+      return null
+    } finally {
+      lightningLoading.value = false
+    }
+  }
+
+  async function renderLightningLayer() {
+    const token = ++lightningRenderToken
+    if (!isLightningActive.value) {
+      removeLightningLayer()
+      return
+    }
+
+    const map = getOpenLayersMap()
+    if (!map) {
+      deactivateToolbarKey('lightning')
+      ElMessage.warning('地图尚未初始化，无法加载地闪')
+      return
+    }
+
+    const list = await loadLightningData()
+    if (token !== lightningRenderToken || !isLightningActive.value) return
+
+    if (list === null) {
+      deactivateToolbarKey('lightning')
+      removeLightningLayer()
+      return
+    }
+
+    const features = createLightningFeatures(list, map)
+    removeLightningLayer()
+
+    if (!features.length) {
+      deactivateToolbarKey('lightning')
+      lightningData.value = []
+      lightningTitleTime.value = ''
+      ElMessage.warning('近一小时内没有地闪活动')
+      return
+    }
+
+    lightningLayer = new VectorLayer({
+      source: new VectorSource({ features }),
+      style: lightningStyle,
+      zIndex: 580,
+      updateWhileAnimating: true,
+      updateWhileInteracting: true,
+      declutter: false,
+    }) as VectorLayer<VectorSource<Feature>>
+    map.addLayer(lightningLayer)
+    bindLightningTooltip(map)
+  }
+
+  function removeLightningLayer() {
+    lightningRenderToken++
+    unbindLightningTooltip()
+    const map = getOpenLayersMap()
+    if (lightningLayer && map && map.getLayers().getArray().includes(lightningLayer)) {
+      map.removeLayer(lightningLayer)
+    }
+    lightningLayer = null
+  }
+
+  function bindLightningTooltip(map: OlMap) {
+    unbindLightningTooltip()
+    lightningTooltipOverlay = new Overlay({
+      element: createLightningTooltipElement(),
+      offset: [12, -12],
+      positioning: 'bottom-left',
+      stopEvent: false,
+    })
+    map.addOverlay(lightningTooltipOverlay)
+    lightningPointerMoveListenerKey = map.on('pointermove', (event: any) => {
+      if (!lightningLayer || !lightningTooltipOverlay) return
+
+      const feature = map.forEachFeatureAtPixel(
+        event.pixel,
+        (candidate: any) => candidate,
+        {
+          hitTolerance: 10,
+          layerFilter: (layer: any) => layer === lightningLayer,
+        },
+      ) as any
+
+      const element = lightningTooltipOverlay.getElement() as HTMLElement | undefined
+      if (!feature || feature.get('featureType') !== 'lightning' || !element) {
+        hideLightningTooltip()
+        return
+      }
+
+      element.innerHTML = getLightningTooltipHtml(feature)
+      element.style.display = 'block'
+      lightningTooltipOverlay.setPosition(event.coordinate)
+      map.getTargetElement().style.cursor = 'pointer'
+    })
+  }
+
+  function unbindLightningTooltip() {
+    const map = getOpenLayersMap()
+    if (lightningPointerMoveListenerKey) {
+      unByKey(lightningPointerMoveListenerKey)
+      lightningPointerMoveListenerKey = null
+    }
+    if (lightningTooltipOverlay && map) {
+      map.removeOverlay(lightningTooltipOverlay)
+    }
+    lightningTooltipOverlay = null
+    if (map) map.getTargetElement().style.cursor = ''
+  }
+
+  function hideLightningTooltip() {
+    const map = getOpenLayersMap()
+    const element = lightningTooltipOverlay?.getElement() as HTMLElement | undefined
+    if (element) element.style.display = 'none'
+    if (lightningTooltipOverlay) lightningTooltipOverlay.setPosition(undefined)
+    if (map) map.getTargetElement().style.cursor = ''
   }
 
   async function toggleElectricLineCategory(key: ElectricLineCategoryKey) {
@@ -491,10 +691,14 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
 
   function clearActiveLayer() {
     removeRadarLayer()
+    removeLightningLayer()
     removeElectricLineLayer()
     activeKeys.value = []
     resetElectricLineSelection()
     radarLoading.value = false
+    lightningData.value = []
+    lightningTitleTime.value = ''
+    lightningLoading.value = false
     electricLineLoading.value = false
   }
 
@@ -504,6 +708,8 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     radarImages,
     radarIndex,
     radarLoading,
+    lightningData,
+    lightningLoading,
     electricLineData,
     electricLineSelectedCategories,
     electricLineTowerChecked,
@@ -516,6 +722,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     currentRadar,
     currentRadarUrl,
     currentRadarLabel,
+    currentLightningLabel,
     currentElectricLineLabel,
     resolveToolbarKey,
     isToolbarActive,
@@ -527,6 +734,9 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     setRadarIndex,
     prevRadar,
     nextRadar,
+    loadLightningData,
+    renderLightningLayer,
+    removeLightningLayer,
     toggleElectricLineCategory,
     isElectricLineCategoryChecked,
     toggleElectricLineTower,
@@ -548,6 +758,12 @@ function formatElectricLineTime(value?: string) {
   const time = parseCompactDateTime(value)
   if (!time) return ''
   return `${time.month}月${time.day}日 ${time.hour}时${time.minute}分 覆冰分布图`
+}
+
+function formatLightningTime(value?: string) {
+  const time = parseCompactDateTime(value)
+  if (!time) return ''
+  return `${time.month}月${time.day}日 ${time.hour}时地闪实况`
 }
 
 function parseCompactDateTime(value?: string) {
@@ -609,6 +825,97 @@ function normalizeElectricLineResponse(payload: any): ElectricLineItem[] {
       time: item.time ? String(item.time) : '',
       data: item.data,
     }))
+}
+
+function normalizeLightningResponse(payload: any): LightningItem[] {
+  const list = Array.isArray(payload) ? payload : Array.isArray(payload?.DS) ? payload.DS : []
+  return list
+    .filter((item: any) => item)
+    .map((item: any) => ({
+      ...item,
+      FLASHFLAG: item.FLASHFLAG,
+      Lon: item.Lon,
+      Lat: item.Lat,
+      Datetime: item.Datetime ? String(item.Datetime) : '',
+      Lit_Prov: item.Lit_Prov ? String(item.Lit_Prov) : '',
+      Lit_City: item.Lit_City ? String(item.Lit_City) : '',
+      Lit_Cnty: item.Lit_Cnty ? String(item.Lit_Cnty) : '',
+    }))
+}
+
+function createLightningFeatures(list: LightningItem[], map: OlMap) {
+  const projection = map.getView().getProjection()
+  const features: Feature[] = []
+
+  list.forEach((item) => {
+    const lng = Number(item.Lon)
+    const lat = Number(item.Lat)
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return
+
+    features.push(new Feature({
+      geometry: new Point(fromLonLat([lng, lat], projection)),
+      featureType: 'lightning',
+      flashFlag: String(item.FLASHFLAG ?? ''),
+      province: item.Lit_Prov || '-',
+      city: item.Lit_City || '-',
+      county: item.Lit_Cnty || '-',
+      lon: String(item.Lon ?? ''),
+      lat: String(item.Lat ?? ''),
+      datetime: item.Datetime,
+    }))
+  })
+
+  return features
+}
+
+function lightningStyle(feature: any) {
+  return String(feature.get('flashFlag')) === '1' ? LIGHTNING_POSITIVE_STYLE : LIGHTNING_NEGATIVE_STYLE
+}
+
+function createLightningTooltipElement() {
+  const element = document.createElement('div')
+  element.className = 'lightning-tooltip'
+  element.style.cssText = [
+    'display:none',
+    'min-width:12rem',
+    'padding:0.55rem 0.7rem',
+    'border:1px solid rgba(255, 227, 62, 0.72)',
+    'background:rgba(0, 40, 86, 0.92)',
+    'box-shadow:0 0 0.85rem rgba(12, 120, 212, 0.36)',
+    'color:#e9fbff',
+    'font-size:0.75rem',
+    'line-height:1.65',
+    'white-space:nowrap',
+    'pointer-events:none',
+    'z-index:760',
+  ].join(';')
+  return element
+}
+
+function getLightningTooltipHtml(feature: any) {
+  const rows = [
+    ['省', feature.get('province')],
+    ['市', feature.get('city')],
+    ['区（县）', feature.get('county')],
+    ['经度', feature.get('lon')],
+    ['纬度', feature.get('lat')],
+    ['时间', feature.get('datetime')],
+  ]
+
+  return rows
+    .map(([label, value]) => (
+      `<div><span style="color:#fff45c;font-weight:700;">${escapeHtml(label)}：</span>${escapeHtml(value || '-')}</div>`
+    ))
+    .join('')
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function createElectricLineFeatures(

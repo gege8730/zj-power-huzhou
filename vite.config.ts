@@ -28,6 +28,7 @@ function stripVueUseInvalidPureAnnotations(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   const elementPlusResolver = ElementPlusResolver({ importStyle: 'css' })
+  const thunderProxyTarget = env.VITE_APP_THUNDER_PROXY_TARGET || env.VITE_APP_PROXY_TARGET
 
   return {
     base: env.VITE_APP_BASE_URL,
@@ -92,6 +93,11 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
+        '/hz/api/thunderList': {
+          target: thunderProxyTarget,
+          changeOrigin: true,
+          secure: false,
+        },
         '/hz/api': {
           target: env.VITE_APP_PROXY_TARGET,
           changeOrigin: true,
