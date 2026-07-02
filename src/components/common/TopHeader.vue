@@ -69,16 +69,16 @@ onUnmounted(() => {
   left: 25%;
   top: 0;
   width: 150%;
-  height: 94%;
+  height: 96%;
   transform: translateX(-50%);
   background: linear-gradient(
     105deg,
     transparent 0%,
     transparent 35%,
-    rgba(255, 255, 255, 0.08) 43%,
-    rgba(141, 233, 255, 0.46) 50%,
-    rgba(255, 255, 255, 0.16) 56%,
-    transparent 67%,
+    rgba(128, 128, 128, 0.08) 43%,
+    rgba(81, 133, 146, 0.452) 50%,
+    rgba(128, 128, 128, 0.16) 56%,
+    transparent 60%,
     transparent 100%
   );
   background-size: 230% 100%;
@@ -86,14 +86,14 @@ onUnmounted(() => {
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 1;
-  animation: title-highlight-sweep 4.6s ease-in-out infinite;
+  animation: title-highlight-sweep 4s ease-in-out infinite;
 }
 
 @keyframes title-highlight-sweep {
   0%,
   18% {
     opacity: 0;
-    background-position: 135% 0;
+    background-position: 0 0;
   }
   30% {
     opacity: 1;
@@ -107,7 +107,6 @@ onUnmounted(() => {
     background-position: -135% 0;
   }
 }
-
 .date-block {
   width: clamp(6rem, 6.4vw, 8rem);
   margin-left: clamp(2rem, 3.8vw, 4.6rem);

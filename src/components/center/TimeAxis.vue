@@ -1,15 +1,38 @@
 <template>
   <div class="time-axis neon-border">
-    <div class="axis-control" :style="{ backgroundImage: `url(${left_btn})` }" @click="scrollLeft"></div>
-    <div class="axis-control" :style="{ backgroundImage: `url(${right_btn})` }" @click="scrollRight"></div>
+    <button
+      class="axis-control"
+      :class="{ disabled: !canGoLeft }"
+      :style="{ backgroundImage: `url(${left_btn})` }"
+      type="button"
+      aria-label="上一个时次"
+      :disabled="!canGoLeft"
+      @click="scrollLeft"
+    ></button>
+    <button
+      class="axis-control"
+      :class="{ disabled: !canGoRight }"
+      :style="{ backgroundImage: `url(${right_btn})` }"
+      type="button"
+      aria-label="下一个时次"
+      :disabled="!canGoRight"
+      @click="scrollRight"
+    ></button>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
         <el-popover placement="top" trigger="hover" popper-class="time-popover" v-for="(item,index) in timelinelist" :key="index">
           <template #reference>
-            <div class="axis-item" :class="{ active: index == store.timeline.currentIndex }" @click="store.setTimelineIndex(index)">
+            <button
+              class="axis-item"
+              :class="{ active: index == store.timeline.currentIndex }"
+              :style="{ '--axis-delay': `${(index % 7) * 0.13}s` }"
+              :data-axis-index="index"
+              type="button"
+              @click="selectTimelineIndex(index)"
+            >
               <span class="diamond"></span>
               <span class="label">{{ item.time }}</span>
-            </div>
+            </button>
           </template>
           <template #default>
             <div class="popover-content">{{ item.day }}</div>
@@ -50,6 +73,8 @@ const timelinelist = computed(() => props.timeline.map(item => {
   }
   return { time, day }
 }))
+const canGoLeft = computed(() => store.timeline.currentIndex > 0)
+const canGoRight = computed(() => store.timeline.currentIndex < timelinelist.value.length - 1)
 const scrollbarRef = ref()
 let resizeObserver: ResizeObserver | null = null
 let defaultScrollTimer: ReturnType<typeof window.setTimeout> | null = null
@@ -88,6 +113,31 @@ const scrollToDefault = () => {
   scrollToEnd()
 }
 
+const scrollTimelineItemIntoView = (index: number) => {
+  nextTick(() => {
+    const wrap = getScrollbarWrap()
+    const item = wrap?.querySelector(`[data-axis-index="${index}"]`) as HTMLElement | null
+    if (!wrap || !item) return
+
+    const itemLeft = item.offsetLeft
+    const itemRight = itemLeft + item.offsetWidth
+    const visibleLeft = wrap.scrollLeft
+    const visibleRight = visibleLeft + wrap.clientWidth
+    const padding = 24
+
+    if (itemLeft < visibleLeft + padding) {
+      wrap.scrollTo({ left: Math.max(0, itemLeft - padding), behavior: 'smooth' })
+    } else if (itemRight > visibleRight - padding) {
+      wrap.scrollTo({ left: itemRight - wrap.clientWidth + padding, behavior: 'smooth' })
+    }
+  })
+}
+
+const selectTimelineIndex = (index: number) => {
+  store.setTimelineIndex(index)
+  scrollTimelineItemIntoView(index)
+}
+
 /**
  * 全屏/退出全屏时，时间轴容器宽度会跟随布局动画变化。
  * 实况模式要求默认停在最右侧，所以需要在动画结束后再补一次定位，
@@ -109,14 +159,14 @@ const scheduleDefaultScroll = () => {
 const scrollLeft = () => {
   const currentIndex = store.timeline.currentIndex
   if (currentIndex > 0) {
-    store.setTimelineIndex(currentIndex - 1)
+    selectTimelineIndex(currentIndex - 1)
   }
 }
 
 const scrollRight = () => {
   const currentIndex = store.timeline.currentIndex
   if (currentIndex < timelinelist.value.length - 1) {
-    store.setTimelineIndex(currentIndex + 1)
+    selectTimelineIndex(currentIndex + 1)
   }
 }
 
@@ -167,7 +217,35 @@ watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
   width: clamp(1.5rem, 1.45vw, 1.8rem);
   height: clamp(1.5rem, 1.45vw, 1.8rem);
   margin-right: 0.5rem;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
   cursor: pointer;
+  transition: transform 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+}
+
+.axis-control:not(:disabled):hover {
+  filter: drop-shadow(0 0 0.42rem rgba(91, 227, 255, 0.65)) brightness(1.16);
+  transform: translateY(-0.06rem);
+}
+
+.axis-control:not(:disabled):active {
+  transform: translateY(0) scale(0.94);
+}
+
+.axis-control.disabled,
+.axis-control:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+  filter: grayscale(0.65);
+}
+
+.axis-control:focus-visible {
+  outline: 1px solid rgba(255, 227, 62, 0.85);
+  outline-offset: 0.15rem;
 }
 .axis-line-container{
   width: calc(100% - clamp(1.5rem, 1.45vw, 1.8rem) - clamp(1.5rem, 1.45vw, 1.8rem) - 1rem);
@@ -191,41 +269,143 @@ watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
   right: 0.25rem;
   top: 0.43rem;
   height: 0.2rem;
-  background: #044990;
+  background: linear-gradient(90deg, rgba(4, 73, 144, 0.52), rgba(32, 156, 255, 0.72), rgba(4, 73, 144, 0.52));
+  box-shadow: inset 0 0 0.32rem rgba(91, 227, 255, 0.18), 0 0 0.3rem rgba(12, 120, 212, 0.22);
 }
 
 .axis-item {
   position: relative;
   width: 3.4rem;
   height: 1.9rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   text-align: center;
   font-size: clamp(0.58rem, 1.1vw, 0.82rem);
   color: #e5f8ff;
   font-weight: 500;
   cursor: pointer;
+  font-family: inherit;
+  transition: color 0.18s ease, transform 0.18s ease, text-shadow 0.18s ease;
+}
+
+.axis-item:hover,
+.axis-item:focus-visible {
+  color: #fff;
+  transform: translateY(-0.08rem);
+}
+
+.axis-item:focus-visible {
+  outline: none;
+}
+
+.axis-item:active {
+  transform: translateY(0) scale(0.96);
 }
 
 .diamond {
   position: relative;
   display: block;
-  width: 0.35rem;
-  height: 0.35rem;
-  margin: 0.25rem auto 0.25rem;
+  width: 0.37rem;
+  height: 0.37rem;
+  margin: 0.24rem auto 0.24rem;
   transform: rotate(45deg);
   background: #c9edff;
   box-shadow: 0 0 0.5rem rgba(92, 213, 255, 0.9);
+  transition: width 0.18s ease, height 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  animation: axis-diamond-glow 2.8s ease-in-out infinite;
+  animation-delay: var(--axis-delay, 0s);
+}
+
+.diamond::before,
+.diamond::after {
+  content: "";
+  position: absolute;
+  inset: -0.18rem;
+  border: 1px solid rgba(91, 227, 255, 0.24);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.diamond::after {
+  inset: -0.32rem;
+  border-color: rgba(91, 227, 255, 0.12);
+}
+
+.axis-item:hover .diamond,
+.axis-item:focus-visible .diamond {
+  background: #f5fbff;
+  filter: brightness(1.15);
+  box-shadow: 0 0 0.85rem rgba(91, 227, 255, 0.95), 0 0 0.35rem rgba(255, 255, 255, 0.52);
+}
+
+.axis-item:hover .label,
+.axis-item:focus-visible .label {
+  color: #fff;
+  text-shadow: 0 0 0.48rem rgba(91, 227, 255, 0.78);
 }
 
 .axis-item.active .diamond {
-  width: 0.45rem;
-  height: 0.45rem;
-  margin-top: 0.25rem;
+  width: 0.48rem;
+  height: 0.48rem;
+  margin-top: 0.21rem;
   background: #ffe33e;
-  box-shadow: 0 0 0.75rem rgba(255, 215, 42, 0.95);
+  box-shadow: 0 0 1rem rgba(255, 215, 42, 1), 0 0 0.42rem rgba(255, 255, 255, 0.62);
+  animation: axis-active-diamond 1.75s ease-in-out infinite;
+}
+
+.axis-item.active .diamond::before {
+  opacity: 1;
+  border-color: rgba(255, 227, 62, 0.56);
+  animation: axis-diamond-ripple 1.75s ease-out infinite;
+}
+
+.axis-item.active .diamond::after {
+  opacity: 1;
+  border-color: rgba(255, 243, 129, 0.22);
+  animation: axis-diamond-ripple 1.75s ease-out infinite 0.35s;
 }
 
 .axis-item.active .label {
   color: #fff381;
+  text-shadow: 0 0 0.55rem rgba(255, 227, 62, 0.8);
+}
+
+@keyframes axis-diamond-glow {
+  0%,
+  100% {
+    transform: rotate(45deg);
+    box-shadow: 0 0 0.34rem rgba(92, 213, 255, 0.56);
+    opacity: 0.82;
+  }
+  50% {
+    transform: rotate(45deg);
+    box-shadow: 0 0 0.78rem rgba(92, 213, 255, 0.96), 0 0 0.24rem rgba(255, 255, 255, 0.44);
+    opacity: 1;
+  }
+}
+
+@keyframes axis-active-diamond {
+  0%,
+  100% {
+    transform: rotate(45deg) scale(0.94);
+    box-shadow: 0 0 0.72rem rgba(255, 215, 42, 0.9), 0 0 0.28rem rgba(255, 255, 255, 0.52);
+  }
+  50% {
+    transform: rotate(45deg) scale(1.14);
+    box-shadow: 0 0 1rem rgba(255, 227, 62, 1), 0 0 0.48rem rgba(255, 255, 255, 0.58);
+  }
+}
+
+@keyframes axis-diamond-ripple {
+  0% {
+    transform: scale(0.42);
+    opacity: 0.62;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
 }
 
 /* popover 样式 */
