@@ -9,6 +9,12 @@
     <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
     <MapCore class="map-canvas" />
     <TemperatureLegend />
+    <div v-if="store.isConvectionMode && store.mapRenderData.convectionData" class="convection-risk-legend">
+      <div class="convection-risk-title">风险<br>等级</div>
+      <div class="convection-risk-item high">红色风险</div>
+      <div class="convection-risk-item middle">黄色风险</div>
+      <div class="convection-risk-item low">低风险</div>
+    </div>
 
     <div class="map-bottom-tabs">
       <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">☀ 实况</button>
@@ -82,6 +88,52 @@ const props = defineProps<{
 .map-stage :deep(.radar-time-switch),
 .map-stage :deep(.electric-line-legend) {
   transition: left var(--layout-transition), right var(--layout-transition), width var(--layout-transition), transform var(--layout-transition), opacity var(--layout-transition);
+}
+
+.convection-risk-legend {
+  position: absolute;
+  right: 1.7%;
+  top: 36%;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: clamp(1.45rem, 1.5vw, 1.85rem);
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(0.72rem, 0.78vw, 0.9rem);
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 0 0.32rem rgba(0, 12, 32, 0.86);
+}
+
+.convection-risk-title {
+  margin-bottom: 0.28rem;
+}
+
+.convection-risk-item {
+  min-height: clamp(3.2rem, 8vh, 4.65rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.12rem;
+  writing-mode: vertical-rl;
+  letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.convection-risk-item.high {
+  background: #f14b57;
+}
+
+.convection-risk-item.middle {
+  color: #3b3412;
+  background: #ffda5a;
+  text-shadow: none;
+}
+
+.convection-risk-item.low {
+  background: #52cf93;
 }
 
 .map-title {

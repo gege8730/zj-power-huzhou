@@ -7,6 +7,13 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { fromLonLat } from 'ol/proj';
+import Feature from 'ol/Feature.js';
+import GeoJSON from 'ol/format/GeoJSON.js';
+import VectorLayer from 'ol/layer/Vector.js';
+import VectorSource from 'ol/source/Vector.js';
+import Fill from 'ol/style/Fill.js';
+import Stroke from 'ol/style/Stroke.js';
+import Style from 'ol/style/Style.js';
 import {
     ZJQXOpenLayersMap as ZJQXMap,
     ZJQXOpenLayersGridFieldLayer as ZJQXGridFieldLayer,
@@ -34,6 +41,84 @@ const NORMAL_MAP_ZOOM = 9.3;
 const FULLSCREEN_MAP_ZOOM = 10;
 const MAP_ZOOM_ANIMATION_DURATION = 260;
 const LAYOUT_TRANSITION_DURATION = 460;
+const TOWN_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/town_bounder.geojson`;
+const geoJsonFormat = new GeoJSON();
+const CONVECTION_RISK_COLORS = ['#52cf93', '#ffda5a', '#f14b57'] as const;
+
+type ConvectionVectorLayer = VectorLayer<VectorSource<Feature>>;
+
+const convectionTownStyleCache = new Map<number, Style>();
+
+const getConvectionTownStyle = (feature: any) => {
+    const riskLevel = Math.max(0, Math.min(2, Number(feature.get('riskLevel')) || 0));
+    const cached = convectionTownStyleCache.get(riskLevel);
+    if (cached) return cached;
+
+    const style = new Style({
+        fill: new Fill({ color: CONVECTION_RISK_COLORS[riskLevel] }),
+        stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.92)', width: 1 }),
+    });
+    convectionTownStyleCache.set(riskLevel, style);
+    return style;
+};
+
+const convectionOutlineStyle = new Style({
+    stroke: new Stroke({ color: '#ffffff', width: 2.8 }),
+});
+
+const normalizeConvectionKey = (value: unknown) => String(value ?? '').trim();
+
+const getConvectionFeatureKeys = (feature: any) => {
+    const properties = feature.getProperties();
+    return [
+        properties.NAME,
+        properties.TOWN,
+        properties.name,
+        properties.town,
+        properties.adcode,
+        properties.adminCode,
+        properties.GNID,
+        properties.code,
+    ].map(normalizeConvectionKey).filter(Boolean);
+};
+
+const closeRing = (ring: number[][]) => {
+    if (!Array.isArray(ring) || ring.length < 3) return null;
+    const closedRing = ring.map((point) => [...point]);
+    const first = closedRing[0];
+    const last = closedRing[closedRing.length - 1];
+    if (first?.[0] !== last?.[0] || first?.[1] !== last?.[1]) {
+        closedRing.push([...first]);
+    }
+    return closedRing.length >= 4 ? closedRing : null;
+};
+
+const convertBoundaryLinesToPolygons = (geojson: any) => ({
+    ...geojson,
+    features: Array.isArray(geojson?.features)
+        ? geojson.features.map((feature: any) => ({
+            ...feature,
+            geometry: convertLineGeometryToPolygon(feature?.geometry),
+        }))
+        : [],
+});
+
+const convertLineGeometryToPolygon = (geometry: any) => {
+    if (!geometry) return geometry;
+    if (geometry.type === 'LineString') {
+        const ring = closeRing(geometry.coordinates);
+        return ring ? { type: 'Polygon', coordinates: [ring] } : geometry;
+    }
+    if (geometry.type === 'MultiLineString') {
+        const polygons = (geometry.coordinates || [])
+            .map(closeRing)
+            .filter(Boolean)
+            .map((ring: number[][]) => [ring]);
+        if (polygons.length === 1) return { type: 'Polygon', coordinates: polygons[0] };
+        if (polygons.length > 1) return { type: 'MultiPolygon', coordinates: polygons };
+    }
+    return geometry;
+};
 
 const getOpenLayersMap = () => {
     const map = zjqxMap as any
@@ -138,8 +223,15 @@ onMounted(async () => {
                 if (!res.ok) throw new Error(`Failed to load geojson: ${res.status}`);
                 return res.json() as Promise<ClipGeometryInput>;
             });
+        const townBoundary = await fetch(TOWN_BOUNDARY_URL)
+            .then((res) => {
+                if (!res.ok) throw new Error(`Failed to load town geojson: ${res.status}`);
+                return res.json();
+            });
 
         let layer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
+        let convectionTownLayer: ConvectionVectorLayer | null = null;
+        let convectionOutlineLayer: ConvectionVectorLayer | null = null;
 
         const getGridControlOptions = () => ({
             fill: {
@@ -252,6 +344,81 @@ onMounted(async () => {
             }
         }
 
+        const removeConvectionLayers = () => {
+            const map = getOpenLayersMap();
+            if (!map) return;
+            if (convectionTownLayer && map.getLayers().getArray().includes(convectionTownLayer)) {
+                map.removeLayer(convectionTownLayer);
+            }
+            if (convectionOutlineLayer && map.getLayers().getArray().includes(convectionOutlineLayer)) {
+                map.removeLayer(convectionOutlineLayer);
+            }
+            convectionTownLayer = null;
+            convectionOutlineLayer = null;
+        };
+
+        const updateConvectionFeatureRisk = () => {
+            const frame = store.currentConvectionFrame;
+            const source = convectionTownLayer?.getSource();
+            if (!frame || !source) return;
+
+            source.getFeatures().forEach((feature) => {
+                const riskLevel = getConvectionFeatureKeys(feature)
+                    .map((key) => frame[key])
+                    .find((risk) => risk !== undefined) ?? 0;
+                feature.set('riskLevel', riskLevel);
+            });
+            source.changed();
+        };
+
+        const ensureConvectionLayers = () => {
+            const map = getOpenLayersMap();
+            const frame = store.currentConvectionFrame;
+            if (!map || !store.isConvectionMode || !store.mapRenderData.convectionData || !frame) {
+                removeConvectionLayers();
+                return;
+            }
+
+            removeGridLayer();
+
+            if (!convectionTownLayer) {
+                const polygonBoundary = convertBoundaryLinesToPolygons(townBoundary);
+                const townFeatures = geoJsonFormat.readFeatures(polygonBoundary, {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: map.getView().getProjection(),
+                }) as Feature[];
+                convectionTownLayer = new VectorLayer({
+                    source: new VectorSource({ features: townFeatures }),
+                    style: getConvectionTownStyle,
+                    zIndex: 330,
+                    updateWhileAnimating: true,
+                    updateWhileInteracting: true,
+                });
+                map.addLayer(convectionTownLayer);
+            } else if (!map.getLayers().getArray().includes(convectionTownLayer)) {
+                map.addLayer(convectionTownLayer);
+            }
+
+            if (!convectionOutlineLayer) {
+                const outlineFeatures = geoJsonFormat.readFeatures(adminBoundary as any, {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: map.getView().getProjection(),
+                }) as Feature[];
+                convectionOutlineLayer = new VectorLayer({
+                    source: new VectorSource({ features: outlineFeatures }),
+                    style: convectionOutlineStyle,
+                    zIndex: 331,
+                    updateWhileAnimating: true,
+                    updateWhileInteracting: true,
+                });
+                map.addLayer(convectionOutlineLayer);
+            } else if (!map.getLayers().getArray().includes(convectionOutlineLayer)) {
+                map.addLayer(convectionOutlineLayer);
+            }
+
+            updateConvectionFeatureRisk();
+        };
+
         const applyGridControlOptions = () => {
             if (!layer) return;
             try {
@@ -297,6 +464,7 @@ onMounted(async () => {
                 removeGridLayer();
                 return;
             }
+            removeConvectionLayers();
 
             const renderGridData = getRenderGridData(gridData)
 
@@ -331,6 +499,15 @@ onMounted(async () => {
 
         watch(() => [store.mapRenderData.gridData], () => {
             updateGridLayer();
+        }, { immediate: true, deep: true });
+
+        watch(() => [
+            store.isConvectionMode,
+            store.mapRenderData.convectionData,
+            store.currentConvectionFrame,
+            store.timeline.currentLabel?.filePath,
+        ], () => {
+            ensureConvectionLayers();
         }, { immediate: true, deep: true });
 
         watch(() => [mapControlStore.gridFillEnabled, mapControlStore.gridValueVisible], () => {

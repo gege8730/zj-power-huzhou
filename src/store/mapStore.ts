@@ -60,10 +60,40 @@ export interface TimelineData {
   currentLabel: { dateTime: string; filePath: string }
 }
 
+export type ConvectionRiskLevel = 0 | 1 | 2
+
+export interface ShortTermWarningHour {
+  time?: string
+  risk?: string | number
+}
+
+export interface ShortTermWarningTown {
+  town?: string
+  name?: string
+  risk?: string | number
+  level?: string | number
+  hours?: ShortTermWarningHour[]
+  [key: string]: any
+}
+
+export interface ShortTermWarningData {
+  observeTime?: string
+  time?: string
+  warning?: ShortTermWarningTown[]
+  [key: string]: any
+}
+
+export interface ConvectionRenderData {
+  observeTime: string
+  timeline: Array<{ dateTime: string; filePath: string }>
+  frames: Record<string, Record<string, ConvectionRiskLevel>>
+}
+
 /** 地图渲染数据 */
 export interface MapRenderData {
   /** 网格数据 */
   gridData: any | null
+  convectionData: ConvectionRenderData | null
   /** 边界数据 */
   boundaryData: any | null
   /** 颜色配置 */
@@ -94,8 +124,8 @@ const LIVE_FACTORS: FactorConfig[] = [
   { type: 'wind', name: '风', options: ['极大风',  '12h极大风'], ele: ['EXMAXWINDV', 'FEXMAX24'], stationEle: ['WSIM1',  ''], eleDuration: ['H', 'H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
   { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], stationEle: ['VIS1', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
   { type: 'humidity', name: '相对湿度', options: ['整点',], ele: ['10MIN_RELH',], stationEle: ['RH1'], eleDuration: ['H'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-  { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: [''], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
-  { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+  { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: ['OSS_RADIATION'], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
+  { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['CONVECTION', 'CONVECTION', 'CONVECTION', 'CONVECTION'], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
 ]
 
 const FORECAST_FACTORS: FactorConfig[] = [
@@ -104,7 +134,7 @@ const FORECAST_FACTORS: FactorConfig[] = [
   { type: 'wind', name: '风', options: ['极大风'], ele: ['WindEx'], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/wind_{option}_{time}.json' },
   { type: 'visibility', name: '能见度', options: ['3h'], ele: ['Vis3'], stationEle: [''], eleDuration: ['3H'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
   { type: 'humidity', name: '相对湿度', options: ['1h'], ele: ['Rh'], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
-  { type: 'cloud', name: '云量', options: ['逐小时'], ele: [''], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
+  { type: 'cloud', name: '云量', options: ['逐小时'], ele: ['OSS_CLOUD'], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
 ]
 
 function cloneFactors(factors: FactorConfig[]) {
@@ -151,6 +181,8 @@ export const useMapStore = defineStore('map', () => {
     const factor = currentFactor.value
     return factor.options[currentOptionIndex.value] || factor.options[0]
   })
+
+  const isConvectionMode = computed(() => productMode.value === 'live' && currentFactor.value.type === 'convection')
 
   // ==================== 时间轴状态 ====================
   /** 时间轴请求参数 */
@@ -209,6 +241,7 @@ export const useMapStore = defineStore('map', () => {
   /** 地图渲染数据 */
   const mapRenderData = ref<MapRenderData>({
     gridData: null,
+    convectionData: null,
     boundaryData: null,
     colorConfig: null,
     loading: false,
@@ -217,6 +250,10 @@ export const useMapStore = defineStore('map', () => {
   })
   // 地图标题
   const maptitle = computed (() => {
+    if (isConvectionMode.value) {
+      const time = dayjs(timeline.value.currentLabel.dateTime || mapRenderData.value.convectionData?.observeTime)
+      return time.isValid() ? `${time.format('YYYY年MM月DD日HH时mm分')} 强对流风险图` : '强对流风险图'
+    }
     if(timelineParams.value.ele == '') return '要素数据开发中...'
     const time = dayjs(timeline.value.currentLabel.dateTime)
     if (!time.isValid()) return ''
@@ -246,6 +283,13 @@ export const useMapStore = defineStore('map', () => {
   /** 当前网格 ele，用于匹配色标 alias */
   const currentGridEle = computed(() => currentFactor.value.ele[currentOptionIndex.value] || '')
 
+  const currentConvectionFrame = computed(() => {
+    const data = mapRenderData.value.convectionData
+    if (!data) return null
+    const frameKey = timeline.value.currentLabel.filePath || data.timeline[0]?.filePath
+    return frameKey ? data.frames[frameKey] ?? null : null
+  })
+
   // ==================== 刷新状态 ====================
   /** 刷新状态 */
   const refreshState = ref<RefreshState>({
@@ -266,6 +310,11 @@ export const useMapStore = defineStore('map', () => {
     if (factorIndex < 0) factorIndex = 0
     currentSelection.value = `${factorIndex}-${optionIndex}`
     mapRenderData.value.colorConfig = null
+    if (type === 'convection') {
+      mapRenderData.value.gridData = null
+    } else {
+      mapRenderData.value.convectionData = null
+    }
     console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
   }
 
@@ -279,6 +328,7 @@ export const useMapStore = defineStore('map', () => {
     currentSelection.value = '0-0'
     setTimelineLabels([])
     mapRenderData.value.gridData = null
+    mapRenderData.value.convectionData = null
     mapRenderData.value.colorConfig = null
     mapRenderData.value.error = null
     clearCache()
@@ -291,6 +341,7 @@ export const useMapStore = defineStore('map', () => {
     if (index >= 0 && index < timeline.value.labels.length) {
       timeline.value.currentIndex = index
       timeline.value.currentLabel = timeline.value.labels[index]
+      if (isConvectionMode.value) return
       // 刷新地图数据
       refreshMapData()
     }
@@ -319,6 +370,11 @@ export const useMapStore = defineStore('map', () => {
   async function refreshMapData() {
     const factor = currentFactor.value
     const currentTimeFile = timeline.value.currentLabel.filePath
+    if (isConvectionMode.value) {
+      mapRenderData.value.gridData = null
+      mapRenderData.value.error = null
+      return
+    }
     if(timelineParams.value.ele == ''){
       mapRenderData.value.error = '当前要素数据开发中，暂无数据可展示'
       mapRenderData.value.gridData = null
@@ -421,11 +477,28 @@ export const useMapStore = defineStore('map', () => {
     mapRenderData.value.colorConfig = config
   }
 
+  function setConvectionWarningData(source: ShortTermWarningData | null | undefined) {
+    const renderData = buildConvectionRenderData(source)
+    mapRenderData.value.convectionData = renderData
+    if (!isConvectionMode.value) return renderData
+
+    mapRenderData.value.gridData = null
+    mapRenderData.value.colorConfig = null
+    mapRenderData.value.error = renderData ? null : '强对流风险暂无数据'
+    setTimelineLabels(renderData?.timeline ?? [])
+    mapRenderData.value.lastUpdateTime = new Date().toISOString()
+    return renderData
+  }
+
   /**
    * 根据当前要素从接口获取色标，并按当前 ele 匹配 alias。
    * 若没有 alias 匹配项，则使用该 category 返回的第一条色标。
    */
   async function loadCurrentColorConfig() {
+    if (isConvectionMode.value) {
+      setColorConfig(null)
+      return null
+    }
     const category = currentFactor.value.type
     if (!category || !currentGridEle.value) {
       setColorConfig(null)
@@ -491,12 +564,14 @@ export const useMapStore = defineStore('map', () => {
     factors,
     productMode,
     isForecastMode,
+    isConvectionMode,
     currentFactorType,
     currentSelection,
     currentFactor,
     currentOptionIndex,
     currentOption,
     currentGridEle,
+    currentConvectionFrame,
     timelineParams,
     stationTimelineParams,
     timeline,
@@ -516,6 +591,7 @@ export const useMapStore = defineStore('map', () => {
     setAutoRefresh,
     setBoundaryData,
     setColorConfig,
+    setConvectionWarningData,
     loadCurrentColorConfig,
     clearCache,
     clearError,
@@ -568,6 +644,79 @@ function buildMapColorConfig(item: SebiaoConfigItem | null, ele: string): MapCol
 
 function normalizeAlias(value: string) {
   return String(value || '').trim().toUpperCase()
+}
+
+function buildConvectionRenderData(source: ShortTermWarningData | null | undefined): ConvectionRenderData | null {
+  const rows = Array.isArray(source?.warning) ? source.warning : []
+  if (!rows.length) return null
+
+  const endTime = parseConvectionBaseTime(source?.observeTime || source?.time)
+  const startTime = endTime.subtract(110, 'minute')
+  const timeline = Array.from({ length: 12 }, (_, index) => {
+    const time = startTime.add(index * 10, 'minute')
+    return {
+      dateTime: time.format('YYYY-MM-DD HH:mm:ss'),
+      filePath: `convection_${time.format('YYYYMMDDHHmm00')}`,
+    }
+  })
+  const baseRiskMap = buildConvectionRiskMap(rows)
+  const frames = timeline.reduce<Record<string, Record<string, ConvectionRiskLevel>>>((result, item) => {
+    result[item.filePath] = { ...baseRiskMap }
+    return result
+  }, {})
+
+  return {
+    observeTime: endTime.format('YYYY-MM-DD HH:mm:ss'),
+    timeline,
+    frames,
+  }
+}
+
+function parseConvectionBaseTime(value?: string) {
+  const parsed = dayjs(value)
+  const time = parsed.isValid() ? parsed : dayjs()
+  const minute = Math.floor(time.minute() / 10) * 10
+  return time.minute(minute).second(0).millisecond(0)
+}
+
+function buildConvectionRiskMap(rows: ShortTermWarningTown[]) {
+  const riskMap: Record<string, ConvectionRiskLevel> = {}
+
+  rows.forEach((row) => {
+    const risk = normalizeConvectionRisk(row.hours?.[0]?.risk ?? row.risk ?? row.level)
+    getWarningTownKeys(row).forEach((key) => {
+      riskMap[key] = risk
+    })
+  })
+
+  return riskMap
+}
+
+function getWarningTownKeys(row: ShortTermWarningTown) {
+  return [
+    row.town,
+    row.name,
+    row.townName,
+    row.NAME,
+    row.TOWN,
+    row.adcode,
+    row.adminCode,
+    row.townCode,
+    row.code,
+  ]
+    .map(normalizeConvectionKey)
+    .filter(Boolean)
+}
+
+function normalizeConvectionRisk(value: unknown): ConvectionRiskLevel {
+  const text = String(value ?? '').trim()
+  if (text === '2' || text.includes('高') || text.toLowerCase() === 'red') return 2
+  if (text === '1' || text.includes('中') || text.includes('黄') || text.toLowerCase() === 'yellow') return 1
+  return 0
+}
+
+function normalizeConvectionKey(value: unknown) {
+  return String(value ?? '').trim()
 }
 
 function getForecastTimeRange(time: Dayjs, duration: string) {

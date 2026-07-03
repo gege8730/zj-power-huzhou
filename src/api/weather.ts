@@ -43,3 +43,7 @@ export function getShortTermWarning(params: { time: string; adminCode: string; }
 export function getElectricLine() {
     return get('/api/hzElectricLine')
 }
+/**获取台风报告单 */
+export function getTyphoonReportList() {
+    return get('/api/typhoon/report/list')
+}

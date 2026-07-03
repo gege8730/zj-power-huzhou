@@ -168,14 +168,18 @@ const pagerItems = computed<Array<number | string>>(() => {
 })
 
 const publicBase = import.meta.env.BASE_URL || '/'
+const apiBase = import.meta.env.VITE_APP_BASE_API || ''
 
 function getMaterialType(file: MaterialFile | null) {
   return file?.category || file?.type || ''
 }
 
 function normalizePublicUrl(url: string) {
-  if (/^(https?:)?\/\//.test(url) || url.startsWith('blob:') || url.startsWith('data:')) return url
-  return `${publicBase}${url.replace(/^\//, '')}`
+  const normalized = url.trim()
+  if (/^(https?:)?\/\//.test(normalized) || normalized.startsWith('blob:') || normalized.startsWith('data:')) return normalized
+  if (normalized.startsWith('/hz/api') || normalized.startsWith('/sph-main/hz/api')) return normalized
+  if (normalized.startsWith('/api/')) return `${apiBase}${normalized}`
+  return `${publicBase}${normalized.replace(/^\//, '')}`
 }
 
 const previewSrc = computed(() => {

@@ -24,7 +24,10 @@
           <template #reference>
             <button
               class="axis-item"
-              :class="{ active: index == store.timeline.currentIndex }"
+              :class="[
+                { active: index == store.timeline.currentIndex, convection: store.isConvectionMode },
+                item.riskClass,
+              ]"
               :style="{ '--axis-delay': `${(index % 7) * 0.13}s` }"
               :data-axis-index="index"
               type="button"
@@ -71,8 +74,17 @@ const timelinelist = computed(() => props.timeline.map(item => {
     time = `${date.format('HH:mm')}`
     day = `${date.format('M月D日HH:mm')}`
   }
-  return { time, day }
+  return { time, day, riskClass: getConvectionRiskClass(item.filePath) }
 }))
+
+const getConvectionRiskClass = (filePath: string) => {
+  if (!store.isConvectionMode) return ''
+  const frame = store.mapRenderData.convectionData?.frames?.[filePath]
+  const maxRisk = frame ? Math.max(...Object.values(frame).map((risk) => Number(risk) || 0)) : 0
+  if (maxRisk >= 2) return 'risk-high'
+  if (maxRisk >= 1) return 'risk-middle'
+  return 'risk-low'
+}
 const canGoLeft = computed(() => store.timeline.currentIndex > 0)
 const canGoRight = computed(() => store.timeline.currentIndex < timelinelist.value.length - 1)
 const scrollbarRef = ref()
@@ -191,7 +203,7 @@ onBeforeUnmount(() => {
   }
 })
 
-watch(() => [props.timeline, store.productMode], scheduleDefaultScroll, { deep: true })
+watch(() => [props.timeline, store.productMode, store.isConvectionMode], scheduleDefaultScroll, { deep: true })
 watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
 </script>
 
@@ -253,7 +265,7 @@ watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
 }
 .axis-line {
   position: relative;
-  height: 1.65rem;
+  height: 1.95rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -287,6 +299,56 @@ watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
   cursor: pointer;
   font-family: inherit;
   transition: color 0.18s ease, transform 0.18s ease, text-shadow 0.18s ease;
+}
+
+.axis-item.convection {
+  --risk-color: #52cf93;
+  --risk-glow: rgba(82, 207, 147, 0.62);
+  --risk-bg: rgba(82, 207, 147, 0.08);
+}
+
+.axis-item.convection::before {
+  content: "";
+  position: absolute;
+  left: 0.08rem;
+  right: 0.08rem;
+  top: 0.74rem;
+  bottom: -0.22rem;
+  z-index: 0;
+  border-bottom: 2px solid var(--risk-color);
+  background: linear-gradient(180deg, rgba(31, 50, 104, 0.22), var(--risk-bg));
+  box-shadow: inset 0 -0.18rem 0.48rem var(--risk-bg);
+}
+
+.axis-item.convection.risk-low {
+  --risk-color: #52cf93;
+  --risk-glow: rgba(82, 207, 147, 0.62);
+  --risk-bg: rgba(82, 207, 147, 0.08);
+}
+
+.axis-item.convection.risk-middle {
+  --risk-color: #ffda5a;
+  --risk-glow: rgba(255, 218, 90, 0.62);
+  --risk-bg: rgba(255, 218, 90, 0.08);
+}
+
+.axis-item.convection.risk-high {
+  --risk-color: #f14b57;
+  --risk-glow: rgba(241, 75, 87, 0.64);
+  --risk-bg: rgba(241, 75, 87, 0.08);
+}
+
+.axis-item.convection.active::before,
+.axis-item.convection:hover::before,
+.axis-item.convection:focus-visible::before {
+  background: linear-gradient(180deg, rgba(39, 58, 119, 0.14), var(--risk-bg));
+  box-shadow: inset 0 -0.2rem 0.58rem var(--risk-bg), 0 0 0.72rem var(--risk-glow);
+}
+
+.axis-item.convection .diamond,
+.axis-item.convection .label {
+  position: relative;
+  z-index: 1;
 }
 
 .axis-item:hover,

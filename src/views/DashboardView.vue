@@ -29,7 +29,7 @@ import RightSidebar from '../components/right/RightSidebar.vue'
 import PdfPreviewDialog from '../components/common/PdfPreviewDialog.vue'
 import rawMock from '../mock/dashboard.json'
 import { onMounted, ref, watch } from 'vue'
-import { getTimeList, hzSmailDay, getDqByHz, dayForecast,getShortTermWarning } from '@/api/weather'
+import { getTimeList, hzSmailDay, getDqByHz, dayForecast, getShortTermWarning, getTyphoonReportList } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import { useLayoutStore, useMapStore } from '@/store'
@@ -42,6 +42,13 @@ const similarDate = ref('相似日')
 const pdfPreviewVisible = ref(false)
 const previewFile = ref<MaterialFile | null>(null)
 
+interface TyphoonReportItem {
+  fileName?: string
+  typhoonNo?: string
+  reportTime?: string
+  fileUrl?: string
+}
+
 const handlePreviewMaterial = (file: MaterialFile) => {
   if (!file.pdfUrl && !file.filePath) {
     ElMessage.warning('当前材料暂无可预览 PDF')
@@ -53,6 +60,12 @@ const handlePreviewMaterial = (file: MaterialFile) => {
 }
 // 时间轴获取
 const fetchData = async () => {
+  if (store.isConvectionMode) {
+    await fetchWaringData()
+    initData.value.timeline = store.timeline.labels
+    initData.value.mapTitle = store.maptitle
+    return
+  }
   // 判断 ele 参数是否为空字符串
   if (store.timelineParams.ele === '') {
     console.warn('当前要素参数为空，无法获取时间列表')
@@ -89,13 +102,51 @@ const fetchData = async () => {
 //短临告警获取
 
 const fetchWaringData = async () => {
+  const warningTime = getLatestTenMinuteTime()
   const params = {
-    time: dayjs().format('YYYY-MM-DD HH:00:00'),
+    time: warningTime.format('YYYY-MM-DD HH:mm:00'),
     adminCode: '330500'
   }
   await getShortTermWarning(params).then((response) => {
-    initData.value.warning = response.DS
+    const warningData = {
+      ...(response.DS || {}),
+      observeTime: response.DS?.observeTime || warningTime.format('YYYY-MM-DD HH:mm:00'),
+    }
+    initData.value.warning = warningData
+    store.setConvectionWarningData(warningData)
+    if (store.isConvectionMode) {
+      initData.value.timeline = store.timeline.labels
+      initData.value.mapTitle = store.maptitle
+    }
+    return warningData
   })
+}
+
+function getLatestTenMinuteTime() {
+  const now = dayjs()
+  return now.minute(Math.floor(now.minute() / 10) * 10).second(0).millisecond(0)
+}
+
+function mapTyphoonReportFiles(list: TyphoonReportItem[]): MaterialFile[] {
+  return list
+    .filter((item) => Boolean(item?.fileUrl))
+    .map((item) => {
+      const reportTime = String(item.reportTime || '')
+      const title = item.fileName?.replace(/\.pdf$/i, '') || [item.typhoonNo, reportTime].filter(Boolean).join('_') || '台风报告单'
+
+      return {
+        title,
+        updateTime: formatTyphoonReportTime(reportTime),
+        pdfUrl: item.fileUrl,
+        category: '台风报告单',
+        type: '台风报告单',
+      }
+    })
+}
+
+function formatTyphoonReportTime(value: string) {
+  if (!/^\d{12}$/.test(value)) return value || ''
+  return `${value.slice(0, 4)}年${value.slice(4, 6)}月${value.slice(6, 8)}日${value.slice(8, 10)}时${value.slice(10, 12)}分更新`
 }
 function filterForecastTimeline(timeline: any[], duration: string) {
   const start = parseTimelineParamTime(store.timelineParams.startTime)
@@ -149,10 +200,11 @@ function getDurationHours(duration: string) {
 const initAppData = async () => {
   try {
     // 并行请求所有初始化数据
-    const [similarRes, dqRes, forecastRes] = await Promise.allSettled([
+    const [similarRes, dqRes, forecastRes, typhoonReportRes] = await Promise.allSettled([
       hzSmailDay({ type: 'month' }),
       getDqByHz(),
       dayForecast({ lat: '30.894408', lon: '120.086728' }),
+      getTyphoonReportList(),
       fetchWaringData()
     ])
     console.log('similarRes:', similarRes)
@@ -196,6 +248,12 @@ const initAppData = async () => {
       initData.value.forecastDays = (forecastRes.value.DS as any[]).slice(0, 7)
     } else {
       console.warn('获取15天预报失败:', (forecastRes as PromiseRejectedResult).reason)
+    }
+    if (typhoonReportRes.status === 'fulfilled' && Array.isArray(typhoonReportRes.value?.DS)) {
+      initData.value.materialTabs = ['台风报告单']
+      initData.value.materialFiles = mapTyphoonReportFiles(typhoonReportRes.value.DS as TyphoonReportItem[])
+    } else {
+      console.warn('获取台风报告单失败:', (typhoonReportRes as PromiseRejectedResult).reason)
     }
   } catch (e) {
     console.error('初始化应用数据失败:', e)
