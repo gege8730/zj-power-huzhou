@@ -1,6 +1,8 @@
 <template>
   <section class="panel" :class="className">
-    <div v-if="title" class="panel-title">{{ title }}</div>
+    <div v-if="title" class="panel-title">
+      <span class="panel-title-text" :data-title="title">{{ title }}</span>
+    </div>
     <div class="panel-body custom-scrollbar" :class="bodyClass">
       <slot />
     </div>

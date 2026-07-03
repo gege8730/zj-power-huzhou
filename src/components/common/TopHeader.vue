@@ -75,9 +75,9 @@ onUnmounted(() => {
     105deg,
     transparent 0%,
     transparent 35%,
-    rgba(128, 128, 128, 0.08) 43%,
+    rgba(146, 146, 146, 0.08) 43%,
     rgba(81, 133, 146, 0.452) 50%,
-    rgba(128, 128, 128, 0.16) 56%,
+    rgba(139, 139, 139, 0.16) 56%,
     transparent 60%,
     transparent 100%
   );
@@ -86,7 +86,7 @@ onUnmounted(() => {
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 1;
-  animation: title-highlight-sweep 4s ease-in-out infinite;
+  animation: title-highlight-sweep 3s ease-in-out infinite;
 }
 
 @keyframes title-highlight-sweep {
