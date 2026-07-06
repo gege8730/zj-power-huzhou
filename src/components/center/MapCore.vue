@@ -337,6 +337,10 @@ onMounted(async () => {
             return { colorConfig, colorize, palette }
         }
 
+        const getGridRowOrder = () => (
+            store.currentFactorType === 'radiation' ? 'north-to-south' : 'south-to-north'
+        );
+
         const removeGridLayer = () => {
             if (layer && zjqxMap) {
                 zjqxMap.removeZJQXLayer(layer);
@@ -471,14 +475,14 @@ onMounted(async () => {
             if (layer) {
                 layer.update({
                     data: renderGridData,
-                    normalize: { rowOrder: 'south-to-north' },
+                    normalize: { rowOrder: getGridRowOrder() },
                     palette: colorResources.palette,
                     colorize: colorResources.colorize,
                 })
                 applyGridControlOptions();
                 applyGridClip();
             } else {
-                const grid = normalizeWeatherGrid(renderGridData, { rowOrder: 'south-to-north' });
+                const grid = normalizeWeatherGrid(renderGridData, { rowOrder: getGridRowOrder() });
                 layer = new ZJQXGridFieldLayer({
                     data: grid,
                     palette: colorResources.palette,

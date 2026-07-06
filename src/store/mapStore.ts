@@ -262,6 +262,12 @@ export const useMapStore = defineStore('map', () => {
       return getForecastMapTitle(time)
     }
 
+    if (currentFactor.value.type === 'radiation') {
+      const startTime = time.subtract(15, 'minute')
+      const mapTime = `${startTime.format('YYYY年M月D日HH时mm分')}-${time.format('D日HH时mm分')}`
+      return `${mapTime} FY-4B辐射分布图`
+    }
+
     const factor = `${currentOption.value.replace('h','小时')}${currentFactor.value.name}分布图`
     const duration = currentFactor.value.eleDuration[currentOptionIndex.value]
     let map_time
