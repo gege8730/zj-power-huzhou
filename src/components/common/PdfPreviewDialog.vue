@@ -177,7 +177,8 @@ function getMaterialType(file: MaterialFile | null) {
 function normalizePublicUrl(url: string) {
   const normalized = url.trim()
   if (/^(https?:)?\/\//.test(normalized) || normalized.startsWith('blob:') || normalized.startsWith('data:')) return normalized
-  if (normalized.startsWith('/hz/api') || normalized.startsWith('/sph-main/hz/api')) return normalized
+  if (normalized.startsWith('/sph-main/hz/api')) return normalized
+  if (normalized.startsWith('/hz/api')) return import.meta.env.PROD ? `/sph-main${normalized}` : normalized
   if (normalized.startsWith('/api/')) return `${apiBase}${normalized}`
   return `${publicBase}${normalized.replace(/^\//, '')}`
 }
