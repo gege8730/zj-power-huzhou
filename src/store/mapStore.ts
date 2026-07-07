@@ -285,6 +285,8 @@ export const useMapStore = defineStore('map', () => {
 
   /** 色标原始数据缓存：接口按 category 获取，切换子要素时再按 alias 匹配 */
   const colorConfigCache = ref<Record<string, SebiaoConfigItem[]>>({})
+  let mapDataRequestSerial = 0
+  let colorConfigRequestSerial = 0
 
   /** 当前网格 ele，用于匹配色标 alias */
   const currentGridEle = computed(() => currentFactor.value.ele[currentOptionIndex.value] || '')
@@ -308,6 +310,8 @@ export const useMapStore = defineStore('map', () => {
   // ==================== Actions ====================
 
   async function setNewFactorOption(type: FactorType, optionIndex: number) {
+    mapDataRequestSerial++
+    colorConfigRequestSerial++
     let [factorIndex] = currentSelection.value.split('-').map(Number)
     if (currentFactorType.value != type){
       currentFactorType.value = type
@@ -316,9 +320,9 @@ export const useMapStore = defineStore('map', () => {
     if (factorIndex < 0) factorIndex = 0
     currentSelection.value = `${factorIndex}-${optionIndex}`
     mapRenderData.value.colorConfig = null
-    if (type === 'convection') {
-      mapRenderData.value.gridData = null
-    } else {
+    mapRenderData.value.gridData = null
+    mapRenderData.value.loading = false
+    if (type !== 'convection') {
       mapRenderData.value.convectionData = null
     }
     console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
@@ -328,6 +332,8 @@ export const useMapStore = defineStore('map', () => {
   function setProductMode(mode: ProductMode) {
     if (productMode.value === mode) return
 
+    mapDataRequestSerial++
+    colorConfigRequestSerial++
     productMode.value = mode
     factors.value = cloneFactors(mode === 'forecast' ? FORECAST_FACTORS : LIVE_FACTORS)
     currentFactorType.value = factors.value[0]?.type || 'temperature'
@@ -336,6 +342,7 @@ export const useMapStore = defineStore('map', () => {
     mapRenderData.value.gridData = null
     mapRenderData.value.convectionData = null
     mapRenderData.value.colorConfig = null
+    mapRenderData.value.loading = false
     mapRenderData.value.error = null
     clearCache()
   }
@@ -374,6 +381,9 @@ export const useMapStore = defineStore('map', () => {
    * 手动刷新地图数据
    */
   async function refreshMapData() {
+    const requestSerial = ++mapDataRequestSerial
+    const requestProductMode = productMode.value
+    const requestSelection = currentSelection.value
     const factor = currentFactor.value
     const currentTimeFile = timeline.value.currentLabel.filePath
     if (isConvectionMode.value) {
@@ -395,7 +405,9 @@ export const useMapStore = defineStore('map', () => {
 
     // 检查缓存
     if (dataCache.value[cacheKey]) {
-      mapRenderData.value.gridData = dataCache.value[cacheKey]
+      const data = normalizeMapGridDataForCurrentFactor(dataCache.value[cacheKey])
+      dataCache.value[cacheKey] = data
+      mapRenderData.value.gridData = data
       mapRenderData.value.lastUpdateTime = new Date().toISOString()
       return
     }
@@ -407,8 +419,16 @@ export const useMapStore = defineStore('map', () => {
     try {
       // 根据要素类型和选项获取数据
       const dataUrl = await generateData(currentTimeFile)
+      if (
+        requestSerial !== mapDataRequestSerial
+        || requestProductMode !== productMode.value
+        || requestSelection !== currentSelection.value
+        || currentTimeFile !== timeline.value.currentLabel.filePath
+      ) {
+        return
+      }
       console.log(dataUrl,'map')
-      const data = dataUrl
+      const data = normalizeMapGridDataForCurrentFactor(dataUrl)
       // 缓存数据
       dataCache.value[cacheKey] = data
       mapRenderData.value.gridData = data
@@ -418,10 +438,13 @@ export const useMapStore = defineStore('map', () => {
       refreshState.value.lastRefreshTime = new Date().toISOString()
       refreshState.value.refreshCount++
     } catch (error: any) {
+      if (requestSerial !== mapDataRequestSerial) return
       mapRenderData.value.error = error.message || '加载数据失败'
       console.error('Failed to refresh map data:', error)
     } finally {
-      mapRenderData.value.loading = false
+      if (requestSerial === mapDataRequestSerial) {
+        mapRenderData.value.loading = false
+      }
     }
   }
 
@@ -435,6 +458,69 @@ export const useMapStore = defineStore('map', () => {
     }
     const res = await getDataFile(params)
     return res.DS
+  }
+
+  function normalizeMapGridDataForCurrentFactor(gridData: any) {
+    if (currentFactor.value.type !== 'visibility') return gridData
+    if (gridData?.__visibilityUnit === 'm') return gridData
+    return roundVisibilityGridData(gridData)
+  }
+
+  function isMissingGridValue(value: unknown, missingValue: unknown) {
+    if (value == null) return true
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return true
+    if (missingValue == null) return false
+
+    const numericMissingValue = Number(missingValue)
+    return Number.isFinite(numericMissingValue) && numericValue === numericMissingValue
+  }
+
+  function roundVisibilityGridValue(value: unknown, missingValue: unknown) {
+    if (isMissingGridValue(value, missingValue)) return value
+    const meterValue = productMode.value === 'forecast' ? Number(value) * 1000 : Number(value)
+    return Math.round(meterValue)
+  }
+
+  function roundOptionalVisibilityGridValue(value: unknown, missingValue: unknown) {
+    if (value == null || isMissingGridValue(value, missingValue)) return value
+    return roundVisibilityGridValue(value, missingValue)
+  }
+
+  function roundVisibilityGridData(gridData: any) {
+    if (!gridData) return gridData
+
+    const missingValue = gridData.missingValue
+
+    if (gridData.values instanceof Float32Array) {
+      const values = new Float32Array(gridData.values.length)
+      for (let index = 0; index < gridData.values.length; index++) {
+        values[index] = Number(roundVisibilityGridValue(gridData.values[index], missingValue))
+      }
+
+      return {
+        ...gridData,
+        __visibilityUnit: 'm',
+        values,
+        minValue: roundOptionalVisibilityGridValue(gridData.minValue, missingValue),
+        maxValue: roundOptionalVisibilityGridValue(gridData.maxValue, missingValue),
+      }
+    }
+
+    if (Array.isArray(gridData.v)) {
+      return {
+        ...gridData,
+        __visibilityUnit: 'm',
+        v: gridData.v.map((value: unknown) => roundVisibilityGridValue(value, missingValue)),
+        minValue: roundOptionalVisibilityGridValue(gridData.minValue, missingValue),
+        maxValue: roundOptionalVisibilityGridValue(gridData.maxValue, missingValue),
+      }
+    }
+
+    return {
+      ...gridData,
+      __visibilityUnit: 'm',
+    }
   }
 
   /**
@@ -501,12 +587,16 @@ export const useMapStore = defineStore('map', () => {
    * 若没有 alias 匹配项，则使用该 category 返回的第一条色标。
    */
   async function loadCurrentColorConfig() {
+    const requestSerial = ++colorConfigRequestSerial
+    const requestProductMode = productMode.value
+    const requestSelection = currentSelection.value
     if (isConvectionMode.value) {
       setColorConfig(null)
       return null
     }
     const category = currentFactor.value.type
-    if (!category || !currentGridEle.value) {
+    const ele = currentGridEle.value
+    if (!category || !ele) {
       setColorConfig(null)
       return null
     }
@@ -518,12 +608,22 @@ export const useMapStore = defineStore('map', () => {
         list = normalizeSebiaoList(response.DS)
         colorConfigCache.value[category] = list
       }
+      if (
+        requestSerial !== colorConfigRequestSerial
+        || requestProductMode !== productMode.value
+        || requestSelection !== currentSelection.value
+        || category !== currentFactor.value.type
+        || ele !== currentGridEle.value
+      ) {
+        return null
+      }
 
-      const matched = pickSebiaoConfig(list, currentGridEle.value)
-      const config = buildMapColorConfig(matched, currentGridEle.value)
+      const matched = pickSebiaoConfig(list, ele)
+      const config = buildMapColorConfig(matched, ele)
       setColorConfig(config)
       return config
     } catch (error) {
+      if (requestSerial !== colorConfigRequestSerial) return null
       console.error('色标配置加载失败:', error)
       setColorConfig(null)
       return null

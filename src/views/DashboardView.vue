@@ -41,6 +41,7 @@ const initData = ref(rawMock as unknown as DashboardMock)
 const similarDate = ref('相似日')
 const pdfPreviewVisible = ref(false)
 const previewFile = ref<MaterialFile | null>(null)
+let timelineRequestSerial = 0
 
 interface TyphoonReportItem {
   fileName?: string
@@ -59,9 +60,19 @@ const handlePreviewMaterial = (file: MaterialFile) => {
   pdfPreviewVisible.value = true
 }
 // 时间轴获取
+const isTimelineRequestCurrent = (serial: number, productMode: string, selection: string) => (
+  serial === timelineRequestSerial
+  && productMode === store.productMode
+  && selection === store.currentSelection
+)
+
 const fetchData = async () => {
+  const requestSerial = ++timelineRequestSerial
+  const requestProductMode = store.productMode
+  const requestSelection = store.currentSelection
   if (store.isConvectionMode) {
     await fetchWaringData()
+    if (!isTimelineRequestCurrent(requestSerial, requestProductMode, requestSelection)) return
     initData.value.timeline = store.timeline.labels
     initData.value.mapTitle = store.maptitle
     return
@@ -69,11 +80,13 @@ const fetchData = async () => {
   // 判断 ele 参数是否为空字符串
   if (store.timelineParams.ele === '') {
     console.warn('当前要素参数为空，无法获取时间列表')
+    if (!isTimelineRequestCurrent(requestSerial, requestProductMode, requestSelection)) return
     store.initTimeline([])
     ElMessage.warning('该要素还在开发中')
     return
   }
   await getTimeList(store.timelineParams).then((response) => {
+    if (!isTimelineRequestCurrent(requestSerial, requestProductMode, requestSelection)) return
     const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
     let timeline = response.DS
     console.log('原始时间列表:', timeline)

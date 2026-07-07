@@ -44,6 +44,8 @@ const LAYOUT_TRANSITION_DURATION = 460;
 const TOWN_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/town_bounder.geojson`;
 const geoJsonFormat = new GeoJSON();
 const CONVECTION_RISK_COLORS = ['#52cf93', '#ffda5a', '#f14b57'] as const;
+const VISIBILITY_RENDER_SCALE = 1000;
+const COLOR_SCALE_UNDERFLOW_VALUE = -999999;
 
 type ConvectionVectorLayer = VectorLayer<VectorSource<Feature>>;
 
@@ -230,43 +232,53 @@ onMounted(async () => {
             });
 
         let layer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
+        let visibilityValueLayer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
         let convectionTownLayer: ConvectionVectorLayer | null = null;
         let convectionOutlineLayer: ConvectionVectorLayer | null = null;
 
-        const getGridControlOptions = () => ({
-            fill: {
-                ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
-                enabled: mapControlStore.gridFillEnabled,
-                fillType: 2,
-                opacity: mapControlStore.gridFillEnabled ? 1 : 0,
-                colorScaleExtend: {
-                    aboveMax: true,  // 大于色标最大值，继续使用最大值颜色填色
-                }
-            },
-            border: {
-                ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
-                enabled: mapControlStore.gridFillEnabled,
-                color: '#fff',
-                width: 2,
-            },
-            labels: {
-                ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
-                enabled: mapControlStore.gridFillEnabled && mapControlStore.gridValueVisible,
-                color: '#000',
-                fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
-                fontWeight: 500,
-            },
-        });
+        const getGridControlOptions = (options: {
+            fillEnabled?: boolean
+            borderEnabled?: boolean
+            labelsEnabled?: boolean
+        } = {}) => {
+            const fillEnabled = options.fillEnabled ?? mapControlStore.gridFillEnabled
+            const borderEnabled = options.borderEnabled ?? mapControlStore.gridFillEnabled
+            const labelsEnabled = options.labelsEnabled ?? (mapControlStore.gridFillEnabled && mapControlStore.gridValueVisible)
 
-        const isKmUnit = (unit?: string) => {
+            return {
+                fill: {
+                    ...DEFAULT_GRID_FIELD_FILL_OPTIONS,
+                    enabled: fillEnabled,
+                    fillType: 2,
+                    opacity: fillEnabled ? 1 : 0,
+                    colorScaleExtend: {
+                        aboveMax: true,  // 大于色标最大值，继续使用最大值颜色填色
+                    }
+                },
+                border: {
+                    ...DEFAULT_GRID_FIELD_BORDER_OPTIONS,
+                    enabled: borderEnabled,
+                    color: '#fff',
+                    width: 2,
+                },
+                labels: {
+                    ...DEFAULT_GRID_FIELD_LABEL_OPTIONS,
+                    enabled: labelsEnabled,
+                    color: '#000',
+                    fontFamily: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
+                    fontWeight: 500,
+                },
+            }
+        };
+
+        const isMeterUnit = (unit?: string) => {
             const normalizedUnit = String(unit || '').trim().toLowerCase()
-            return ['km', '公里', '千米'].includes(normalizedUnit)
+            return ['m', 'meter', 'meters'].includes(normalizedUnit)
         }
 
-        const shouldRenderVisibilityAsKm = () => (
+        const shouldScaleVisibilityForFill = () => (
             store.currentFactorType === 'visibility'
-            && store.productMode === 'live'
-            && isKmUnit(store.mapRenderData.colorConfig?.unit)
+            && isMeterUnit(store.mapRenderData.colorConfig?.unit)
         )
 
         const isMissingGridValue = (value: unknown, missingValue: unknown) => {
@@ -278,50 +290,61 @@ onMounted(async () => {
             return Number.isFinite(numericMissingValue) && numericValue === numericMissingValue
         }
 
-        const convertMeterValueToKm = (value: unknown, missingValue: unknown) => {
+        const scaleVisibilityMeterValue = (value: unknown, missingValue: unknown) => {
             if (isMissingGridValue(value, missingValue)) return Number(value)
-            return Number(value) / 1000
+            return Number(value) / VISIBILITY_RENDER_SCALE
         }
 
-        const convertOptionalMeterValueToKm = (value: unknown, missingValue: unknown) => {
+        const scaleOptionalVisibilityMeterValue = (value: unknown, missingValue: unknown) => {
             if (value == null || isMissingGridValue(value, missingValue)) return value
-            return Number(value) / 1000
+            return Number(value) / VISIBILITY_RENDER_SCALE
         }
 
         /**
-         * 能见度接口格点值是 m，色标单位是 km。
-         * 这里按色标单位把参与绘制的格点值转成 km，保证填色、文本和图例单位一致。
-         * 注意不直接修改 store 中的原始数据，missingValue 也保持原值，避免缺测被误绘制。
+         * Visibility data and legend stay in meters. The fill layer gets a
+         * proportional down-scaled copy to keep large values inside the renderer range.
          */
         const getRenderGridData = (gridData: any) => {
-            if (!gridData || !shouldRenderVisibilityAsKm()) return gridData
+            if (!gridData || !shouldScaleVisibilityForFill()) return gridData
 
             const missingValue = gridData.missingValue
 
             if (gridData.values instanceof Float32Array) {
                 const values = new Float32Array(gridData.values.length)
                 for (let index = 0; index < gridData.values.length; index++) {
-                    values[index] = convertMeterValueToKm(gridData.values[index], missingValue)
+                    values[index] = scaleVisibilityMeterValue(gridData.values[index], missingValue)
                 }
 
                 return {
                     ...gridData,
                     values,
-                    minValue: convertOptionalMeterValueToKm(gridData.minValue, missingValue),
-                    maxValue: convertOptionalMeterValueToKm(gridData.maxValue, missingValue),
+                    minValue: scaleOptionalVisibilityMeterValue(gridData.minValue, missingValue),
+                    maxValue: scaleOptionalVisibilityMeterValue(gridData.maxValue, missingValue),
                 }
             }
 
             if (Array.isArray(gridData.v)) {
                 return {
                     ...gridData,
-                    v: gridData.v.map((value: unknown) => convertMeterValueToKm(value, missingValue)),
-                    minValue: convertOptionalMeterValueToKm(gridData.minValue, missingValue),
-                    maxValue: convertOptionalMeterValueToKm(gridData.maxValue, missingValue),
+                    v: gridData.v.map((value: unknown) => scaleVisibilityMeterValue(value, missingValue)),
+                    minValue: scaleOptionalVisibilityMeterValue(gridData.minValue, missingValue),
+                    maxValue: scaleOptionalVisibilityMeterValue(gridData.maxValue, missingValue),
                 }
             }
 
             return gridData
+        }
+
+        const getRenderColorStops = () => {
+            const stops = store.mapRenderData.colorConfig?.stops || []
+            if (!shouldScaleVisibilityForFill()) return stops
+
+            return stops.map((item) => ({
+                ...item,
+                value: item.value === COLOR_SCALE_UNDERFLOW_VALUE
+                    ? item.value
+                    : item.value / VISIBILITY_RENDER_SCALE,
+            }))
         }
 
         const getColorScaleResources = () => {
@@ -330,7 +353,7 @@ onMounted(async () => {
 
             const colorConfig: ColorScaleJson = {
                 fieldName: config.fieldName,
-                stops: config.stops,
+                stops: getRenderColorStops(),
             }
             const colorize = createColorScale(colorConfig, { mode: 'step', stopKey: 'stops' });
             const palette = createPaletteTextureData(colorConfig, { mode: 'step', stopKey: 'stops' });
@@ -341,11 +364,47 @@ onMounted(async () => {
             store.currentFactorType === 'radiation' ? 'north-to-south' : 'south-to-north'
         );
 
+        const shouldUseVisibilityValueLayer = () => shouldScaleVisibilityForFill()
+
+        const getMainGridControlOptions = () => getGridControlOptions({
+            labelsEnabled: shouldUseVisibilityValueLayer() ? false : undefined,
+        })
+
+        const getVisibilityValueControlOptions = () => {
+            const controlOptions = getGridControlOptions({
+                fillEnabled: false,
+                borderEnabled: false,
+                labelsEnabled: mapControlStore.gridFillEnabled && mapControlStore.gridValueVisible,
+            })
+
+            return {
+                ...controlOptions,
+                labels: {
+                    ...controlOptions.labels,
+                    precision: 0,
+                    rounding: 1,
+                    zoomPresets: (controlOptions.labels.zoomPresets || []).map((preset) => ({
+                        ...preset,
+                        precision: 0,
+                        rounding: 1,
+                    })),
+                },
+            }
+        }
+
+        const removeVisibilityValueLayer = () => {
+            if (visibilityValueLayer && zjqxMap) {
+                zjqxMap.removeZJQXLayer(visibilityValueLayer);
+                visibilityValueLayer = null;
+            }
+        }
+
         const removeGridLayer = () => {
             if (layer && zjqxMap) {
                 zjqxMap.removeZJQXLayer(layer);
                 layer = null;
             }
+            removeVisibilityValueLayer();
         }
 
         const removeConvectionLayers = () => {
@@ -424,18 +483,19 @@ onMounted(async () => {
         };
 
         const applyGridControlOptions = () => {
-            if (!layer) return;
+            if (!layer && !visibilityValueLayer) return;
             try {
-                layer.update(getGridControlOptions() as any);
+                layer?.update(getMainGridControlOptions() as any);
+                visibilityValueLayer?.update(getVisibilityValueControlOptions() as any);
             } catch (error) {
                 console.warn('更新填色图层显隐失败:', error);
             }
         };
 
-        const applyGridClip = () => {
-            if (!layer) return;
+        const applyLayerClip = (targetLayer: InstanceType<typeof ZJQXGridFieldLayer> | null) => {
+            if (!targetLayer) return;
 
-            const gridLayer = layer as any;
+            const gridLayer = targetLayer as any;
             try {
                 if (mapControlStore.mapClipEnabled) {
                     if (typeof gridLayer.setClipGeometry === 'function') {
@@ -461,6 +521,48 @@ onMounted(async () => {
             }
         };
 
+        const applyGridClip = () => {
+            applyLayerClip(layer);
+            applyLayerClip(visibilityValueLayer);
+        };
+
+        const syncVisibilityValueLayer = (gridData: any, colorResources: NonNullable<ReturnType<typeof getColorScaleResources>>) => {
+            if (!shouldUseVisibilityValueLayer()) {
+                removeVisibilityValueLayer();
+                return;
+            }
+
+            const controlOptions = getVisibilityValueControlOptions();
+            if (visibilityValueLayer) {
+                visibilityValueLayer.update({
+                    data: gridData,
+                    normalize: { rowOrder: getGridRowOrder() },
+                    palette: colorResources.palette,
+                    colorize: colorResources.colorize,
+                    ...controlOptions,
+                } as any);
+                applyLayerClip(visibilityValueLayer);
+                return;
+            }
+
+            const grid = normalizeWeatherGrid(gridData, { rowOrder: getGridRowOrder() });
+            visibilityValueLayer = new ZJQXGridFieldLayer({
+                data: grid,
+                palette: colorResources.palette,
+                colorize: colorResources.colorize,
+                clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
+                ...controlOptions,
+                popup: false,
+                zIndex: 302,
+                opacity: 1,
+                renderResolutionMode: 'integer-zoom',
+                interpolate: true,
+                ratio: 1.15,
+            } as ZJQXOpenLayersGridFieldLayerOptions);
+            zjqxMap!.addZJQXLayer(visibilityValueLayer);
+            applyLayerClip(visibilityValueLayer);
+        };
+
         const updateGridLayer = () => {
             const gridData = store.mapRenderData.gridData
             const colorResources = getColorScaleResources()
@@ -479,8 +581,6 @@ onMounted(async () => {
                     palette: colorResources.palette,
                     colorize: colorResources.colorize,
                 })
-                applyGridControlOptions();
-                applyGridClip();
             } else {
                 const grid = normalizeWeatherGrid(renderGridData, { rowOrder: getGridRowOrder() });
                 layer = new ZJQXGridFieldLayer({
@@ -488,7 +588,7 @@ onMounted(async () => {
                     palette: colorResources.palette,
                     colorize: colorResources.colorize,
                     clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
-                    ...getGridControlOptions(),
+                    ...getMainGridControlOptions(),
                     popup: false,
                     zIndex: 300,
                     opacity: 1,
@@ -497,11 +597,18 @@ onMounted(async () => {
                     ratio: 1.15,
                 } as ZJQXOpenLayersGridFieldLayerOptions);
                 zjqxMap!.addZJQXLayer(layer);
-                applyGridClip();
             }
+            syncVisibilityValueLayer(gridData, colorResources);
+            applyGridControlOptions();
+            applyGridClip();
         };
 
-        watch(() => [store.mapRenderData.gridData], () => {
+        watch(() => [
+            store.mapRenderData.gridData,
+            store.mapRenderData.colorConfig,
+            store.currentFactorType,
+            store.productMode,
+        ], () => {
             updateGridLayer();
         }, { immediate: true, deep: true });
 
