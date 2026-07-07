@@ -400,7 +400,10 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
 
       const response = await getDataFile({ filePath, region: "330500" });
       const list = Array.isArray(response.DS) ? response.DS : [];
-      const stationList = list.filter(isNationStation);
+      const stationList = normalizeStationListForCurrentFactor(
+        list.filter(isNationStation),
+        mapStore.currentFactorType,
+      );
 
       stationDataCache.value[cacheKey] = stationList;
       stationData.value = stationList;
@@ -889,6 +892,33 @@ function formatStationValue(station: AutoStationItem) {
   const raw = station.srcValue ?? station.value;
   if (raw === undefined || raw === null || raw === "") return "--";
   return String(raw);
+}
+
+function normalizeStationListForCurrentFactor(
+  list: AutoStationItem[],
+  factorType: string,
+) {
+  if (factorType !== "visibility") return list;
+  return list.map(normalizeVisibilityStationValue);
+}
+
+function normalizeVisibilityStationValue(station: AutoStationItem) {
+  const raw = station.srcValue ?? station.value;
+  const roundedValue = roundStationValue(raw);
+  if (roundedValue === null) return station;
+
+  return {
+    ...station,
+    value: roundedValue,
+    srcValue: String(roundedValue),
+  };
+}
+
+function roundStationValue(value: unknown) {
+  if (value === undefined || value === null || value === "") return null;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+  return Math.round(numericValue);
 }
 
 function matchStationTimelineItem(
