@@ -115,6 +115,7 @@ const loading = ref(false)
 const currentPage = ref(1)
 const activeTabIndex = ref(0)
 const selectedFile = ref<MaterialFile | null>(null)
+const previewRevision = ref(0)
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -193,8 +194,8 @@ const previewSrc = computed(() => {
 
 const previewKey = computed(() => {
   const file = selectedFile.value
-  if (!file) return previewSrc.value
-  return `${file.title}-${file.updateTime}-${previewSrc.value}`
+  if (!file) return `${previewRevision.value}-${previewSrc.value}`
+  return `${previewRevision.value}-${file.title}-${file.updateTime}-${previewSrc.value}`
 })
 
 function isSameMaterial(a?: MaterialFile | null, b?: MaterialFile | null) {
@@ -217,12 +218,14 @@ function syncActiveTab(file: MaterialFile | null) {
 }
 
 function initSelectedFile(file: MaterialFile | null) {
-  selectedFile.value = file || allFiles.value[0] || null
+  const nextFile = file || allFiles.value[0] || null
+  selectedFile.value = nextFile
   syncActiveTab(selectedFile.value)
+  previewRevision.value += 1
+  loading.value = Boolean(nextFile?.pdfUrl || nextFile?.filePath)
 
   nextTick(() => {
     currentPage.value = findPageByFile(selectedFile.value)
-    loading.value = Boolean(previewSrc.value)
   })
 }
 
@@ -246,6 +249,7 @@ function handleTabChange(index: number) {
 
 function selectFile(file: MaterialFile) {
   selectedFile.value = file
+  previewRevision.value += 1
   loading.value = Boolean(file.pdfUrl || file.filePath)
 }
 

@@ -125,7 +125,7 @@ const LIVE_FACTORS: FactorConfig[] = [
   { type: 'visibility', name: '能见度', options: ['整点', '日最小'], ele: ['VIS', 'VIS24'], stationEle: ['VIS1', 'VIS24'], eleDuration: ['H', 'D'], dataUrlTemplate: '/sample/vis_{option}_{time}.json' },
   { type: 'humidity', name: '相对湿度', options: ['整点',], ele: ['10MIN_RELH',], stationEle: ['RH1'], eleDuration: ['H'], dataUrlTemplate: '/sample/rh_{option}_{time}.json' },
   { type: 'radiation', name: '辐射', options: ['逐15分钟'], ele: ['OSS_RADIATION'], stationEle: [''], eleDuration: ['15MIN'], dataUrlTemplate: '/sample/radiation_{time}.json' },
-  { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['CONVECTION', 'CONVECTION', 'CONVECTION', 'CONVECTION'], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
+  // { type: 'convection', name: '强对流', options: ['综合', '暴雨', '雷电', '大风'], ele: ['CONVECTION', 'CONVECTION', 'CONVECTION', 'CONVECTION'], stationEle: ['', '', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN', '10MIN'], dataUrlTemplate: '/sample/convection_{option}_{time}.json' },
 ]
 
 const FORECAST_FACTORS: FactorConfig[] = [

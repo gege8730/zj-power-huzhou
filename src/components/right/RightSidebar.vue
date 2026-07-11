@@ -1,7 +1,7 @@
 <template>
   <aside class="right-sidebar fade-in">
-    <ShortWarningPanel :rows="warning" />
-    <SimilarDayPanel :days="similarDays" :title-date="similarDate" />
+    <!-- <ShortWarningPanel :rows="warning" />
+    <SimilarDayPanel :days="similarDays" :title-date="similarDate" /> -->
     <ImportantMaterialsPanel :tabs="materialTabs" :files="materialFiles" @preview="emit('preview-material', $event)" />
   </aside>
 </template>
