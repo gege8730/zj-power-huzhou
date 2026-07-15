@@ -224,8 +224,7 @@
   "toolbar": [
     "雷 达",
     "地 闪",
-    "台风路径",
-    "输电线路"
+    "台风路径"
   ],
   "activeToolbar": "输电线路",
   "layerGroups": [
