@@ -1,13 +1,12 @@
 # 湖州电力气象服务平台大屏还原
 
-基于上传的湖州电力设计稿/PSD 还原的 Vite + Vue3 项目。当前版本已从“外层 transform 等比缩放”调整为“响应式布局”，整体使用 `grid / flex / % / vw / vh / rem / clamp()` 管理页面尺寸。
+当前版本已从“外层 transform 等比缩放”调整为“响应式布局”，整体使用 `grid / flex / % / vw / vh / rem / clamp()` 管理页面尺寸。
 
 ## 技术栈
 
 - Vite
 - Vue 3 + `<script setup>`
 - TypeScript
-- 本地 JSON mock 数据
 - 纯 CSS/SVG 还原面板、表格、图表、时间轴等效果
 
 ## 目录结构
