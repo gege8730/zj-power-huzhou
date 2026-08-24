@@ -310,15 +310,16 @@ export const useMapStore = defineStore('map', () => {
   // ==================== Actions ====================
 
   async function setNewFactorOption(type: FactorType, optionIndex: number) {
+    const factorIndex = factors.value.findIndex(factor => factor.type === type)
+    if (factorIndex < 0) return
+
+    const nextSelection = `${factorIndex}-${optionIndex}`
+    if (currentFactorType.value === type && currentSelection.value === nextSelection) return
+
     mapDataRequestSerial++
     colorConfigRequestSerial++
-    let [factorIndex] = currentSelection.value.split('-').map(Number)
-    if (currentFactorType.value != type){
-      currentFactorType.value = type
-      factorIndex = factors.value.findIndex(f => f.type === type)
-    }
-    if (factorIndex < 0) factorIndex = 0
-    currentSelection.value = `${factorIndex}-${optionIndex}`
+    currentFactorType.value = type
+    currentSelection.value = nextSelection
     mapRenderData.value.colorConfig = null
     mapRenderData.value.gridData = null
     mapRenderData.value.loading = false
