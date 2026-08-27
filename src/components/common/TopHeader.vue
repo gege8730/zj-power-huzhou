@@ -55,7 +55,7 @@ onUnmounted(() => {
   align-items: flex-start;
   padding: 1.15vh 0;
   background: 
-    url('../../assets/title.png'),
+    url('../../assets/header.png'),
     linear-gradient(180deg, rgba(7, 62, 106, 0.86), rgba(7, 28, 62, 0.2));
   background-size: 100% 100%;  /* 同时作用于两个背景 */
   background-repeat: no-repeat;
