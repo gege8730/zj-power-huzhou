@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-vue": "latest",
+    "@vxe-ui/core": "^4.4.22",
     "@zjqx/gridfield": "file:zjqx-gridfield-0.2.3-openlayers-secure-text.tgz",
     "axios": "^1.16.1",
     "dayjs": "^1.11.20",
@@ -21,7 +22,10 @@
     "typescript": "latest",
     "vite": "latest",
     "vue": "latest",
-    "vue-tsc": "latest"
+    "vue-router": "^5.3.1",
+    "vue-tsc": "latest",
+    "vxe-pc-ui": "^4.18.9",
+    "vxe-table": "^4.21.10"
   },
   "devDependencies": {
     "less": "^4.6.4",
