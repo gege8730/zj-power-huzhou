@@ -78,10 +78,7 @@ service.interceptors.request.use(
     const signedHeaders = await buildSignedRequest(params, body);
 
     // 合并到请求头
-    config.headers = {
-      ...config.headers,
-      ...signedHeaders,
-    };
+    config.headers.set(signedHeaders);
     return config;
   },
   (error) => Promise.reject(error),

@@ -24,14 +24,16 @@
       "@/*": [
         "src/*"
       ]
-    },
-    "ignoreDeprecations": "6.0"
+    }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue"
+  ],
+  "exclude": [
+    "src/views/QueryPivotView/assess/index copy.vue"
   ],
   "references": []
 }

@@ -20,7 +20,7 @@
     "element-plus": "^2.14.0",
     "ol": "^10.9.0",
     "pinia": "^3.0.4",
-    "typescript": "latest",
+    "typescript": "^5.9.3",
     "vite": "latest",
     "vue": "latest",
     "vue-router": "^5.3.1",

@@ -72,7 +72,7 @@
             width="160"
             fixed
             align="center"
-            :formatter="(_r, _c, val) => formatValue('time', val)"
+            :formatter="(_r: unknown, _c: unknown, val: unknown) => formatValue('time', val)"
           />
           <el-table-column
             v-for="group in forecastGroups"
@@ -87,7 +87,7 @@
               :label="col.label"
               width="160"
               align="center"
-              :formatter="(_r, _c, val) => formatValue(col.prop, val)"
+              :formatter="(_r: unknown, _c: unknown, val: unknown) => formatValue(col.prop, val)"
             />
           </el-table-column>
         </el-table>
@@ -261,7 +261,7 @@ async function fetchAssessData(prodCode: string): Promise<Record<string, string>
 }
 
 // 各 tab 的表头中文映射（未命中的字段保持原 key 作为 label）
-const headerMap = computed<Record<string, string>>(() => {
+const headerMap = computed(() => {
   if (activePrimary.value === "today") {
     return {
       date: "时间",
@@ -334,7 +334,7 @@ const COLUMN_WIDTH = 180;
 const v2Columns = computed<Column<Record<string, string>>[]>(() => {
   const first = rawData.value[0];
   if (!first) return [];
-  const map = headerMap.value;
+  const map = headerMap.value as Record<string, string>;
   return Object.keys(first)
     .filter((key) => key !== "__rowKey")
     .map((key) => ({
@@ -345,7 +345,7 @@ const v2Columns = computed<Column<Record<string, string>>[]>(() => {
       minWidth: 140,
       flexGrow: 1,
       align: "center",
-      cellRenderer: ({ cellData }) => formatValue(key, cellData),
+      cellRenderer: (({ cellData }: { cellData: unknown }) => formatValue(key, cellData)) as any,
     }));
 });
 
