@@ -10,6 +10,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "@vitejs/plugin-vue": "latest",
     "@vxe-ui/core": "^4.4.22",
     "@zjqx/gridfield": "file:zjqx-gridfield-0.2.3-openlayers-secure-text.tgz",
@@ -29,7 +30,7 @@
   },
   "devDependencies": {
     "less": "^4.6.4",
-    "sass-embedded": "^1.99.0",
+    "sass": "1.89.2",
     "unplugin-auto-import": "^21.0.0",
     "unplugin-vue-components": "^32.0.0"
   }

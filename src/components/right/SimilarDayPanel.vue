@@ -36,7 +36,7 @@ defineProps<{
 }>()
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .similar-day {
   flex: 0 0 29%;
   min-height: 15rem;

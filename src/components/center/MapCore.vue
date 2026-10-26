@@ -731,14 +731,15 @@ onUnmounted(() => {
 }
 </style>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .map-container {
     width: 100%;
     height: 100%;
-
-    #map {
-        width: 100%;
-        height: 100%;
-    }
+  #map {
+      width: 100%;
+      height: 100%;
+  }
 }
+
+
 </style>
