@@ -9,11 +9,11 @@
     </div>
     <div class="week">{{ week }}</div>
     <div class="left_tab">
-      <div class="home" :class="{ active: isHome }" @click="router.push('/')">
+      <div class="home" :class="{ active: isHome }" @click="goHome">
         <!-- <img src="../../assets/home/home.png" alt="首页"> -->
         <span>首页</span>
       </div>
-      <div class="home" style="cursor: not-allowed">
+      <div class="home" :class="{ active: isConvection }" @click="enterConvection">
         <span>强对流</span>
       </div>
       <div class="home" style="cursor: not-allowed">
@@ -70,7 +70,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useLayoutStore } from "@/store";
+import { useLayoutStore, useMapStore } from "@/store";
 import { computed } from "vue";
 
 defineProps<{
@@ -86,10 +86,37 @@ let timer: number;
 const router = useRouter();
 const route = useRoute();
 const layoutStore = useLayoutStore();
+const mapStore = useMapStore();
 
-// 当前路由高亮：首页精确匹配，数据查询按前缀匹配（query/assess 都高亮）
-const isHome = computed(() => route.path === "/");
+// 当前路由高亮：首页精确匹配（强对流场景下首页不高亮），数据查询按前缀匹配
+// 场景高亮只在仪表盘路由生效，避免在数据查询页误亮「强对流」
+const isConvection = computed(() => route.path === "/" && mapStore.isConvectionMode);
+const isHome = computed(() => route.path === "/" && !isConvection.value);
 const isQueryPivot = computed(() => route.path.startsWith("/queryPivot/"));
+
+/** 强对流场景通过 URL 表达，刷新/后退都能回到正确场景 */
+function syncSceneQuery(scene?: "convection") {
+  const query = { ...route.query };
+  if (scene) query.scene = scene;
+  else delete query.scene;
+
+  if (route.path !== "/") {
+    router.push({ path: "/", query });
+    return;
+  }
+  router.replace({ query });
+}
+
+function enterConvection() {
+  if (mapStore.isConvectionMode) return;
+  mapStore.setScene("convection");
+  syncSceneQuery("convection");
+}
+
+function goHome() {
+  if (mapStore.isConvectionMode) mapStore.setScene("home");
+  syncSceneQuery();
+}
 
 onMounted(() => {
   timer = setInterval(() => {

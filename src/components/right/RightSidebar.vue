@@ -2,7 +2,12 @@
   <aside class="right-sidebar fade-in">
     <!-- <ShortWarningPanel :rows="warning" />
     <SimilarDayPanel :days="similarDays" :title-date="similarDate" /> -->
-    <ImportantMaterialsPanel :tabs="materialTabs" :files="materialFiles" @preview="emit('preview-material', $event)" />
+    <ImportantMaterialsPanel
+      v-if="!convection"
+      :tabs="materialTabs"
+      :files="materialFiles"
+      @preview="emit('preview-material', $event)"
+    />
   </aside>
 </template>
 
@@ -18,6 +23,7 @@ defineProps<{
   similarDate?: string
   materialTabs: string[]
   materialFiles: MaterialFile[]
+  convection?: boolean
 }>()
 
 const emit = defineEmits<{

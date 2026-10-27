@@ -1,15 +1,18 @@
 <template>
   <BasePanel title="要素叠加" class-name="weather-factors">
-    <div class="factor-list">
-      <div v-for="factor in factors" :key="factor.name" class="factor-row">
+    <div class="factor-list" :class="{ 'is-convection': store.isConvectionMode }">
+      <div v-for="(factor, factorIndex) in factors" :key="factor.name" class="factor-row">
         <span class="factor-name">{{ factor.name }}</span>
         <div class="factor-options">
           <span
-            v-for="(option, index) in factor.options"
+            v-for="(option, optionIndex) in factor.options"
             :key="option"
             class="factor-option"
-            :class="{ active: store.currentFactorType === factor.type && store.currentOptionIndex === index, disabled: factor.ele[index] == '' }"
-            @click="factor.ele[index] != '' && clickFactorOption(factor.type,index)"
+            :class="{
+              active: store.currentSelection === `${factorIndex}-${optionIndex}`,
+              disabled: !store.isConvectionMode && factor.ele[optionIndex] === '',
+            }"
+            @click="clickFactorOption(factorIndex, optionIndex)"
           >
             {{ option }}
           </span>
@@ -20,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FactorConfig,FactorType } from '@/store'
+import type { FactorConfig } from '@/store'
 import BasePanel from '../common/BasePanel.vue'
 import { useMapStore } from '@/store' 
 
@@ -29,8 +32,10 @@ defineProps<{
 }>()
 // 创建 store 实例
 const store = useMapStore()
-const clickFactorOption = (FType: FactorType, option_index: number) => {
-  store.setNewFactorOption(FType,option_index)
+const clickFactorOption = (factorIndex: number, optionIndex: number) => {
+  // 常规场景保持原逻辑：未接数据的选项不可点
+  if (!store.isConvectionMode && store.factors[factorIndex]?.ele[optionIndex] === '') return
+  store.setFactorOption(factorIndex, optionIndex)
 }
 </script>
 
@@ -108,5 +113,26 @@ const clickFactorOption = (FType: FactorType, option_index: number) => {
   color: rgba(255, 255, 255, 0.3);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* 强对流专题：产品项更多（最多 4 个），行内排布需要更紧凑 */
+.factor-list.is-convection .factor-row {
+  grid-template-columns: minmax(5.2rem, 18%) 1fr;
+  padding-left: clamp(0.4rem, 0.5vw, 0.6rem);
+  padding-right: clamp(0.4rem, 0.5vw, 0.6rem);
+}
+
+.factor-list.is-convection .factor-name {
+  padding-left: 1.1rem;
+  white-space: nowrap;
+}
+
+.factor-list.is-convection .factor-options {
+  gap: clamp(0.25rem, 0.55vw, 0.7rem);
+}
+
+.factor-list.is-convection .factor-option {
+  min-width: 1.6rem;
+  padding: 0.1rem 0.3rem;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="legendItems.length"
+    v-if="!store.isConvectionMode && legendItems.length"
     class="legend-wrap"
     :class="{ 'with-electric-line-legend': layerStore.electricLineLegendVisible }"
   >

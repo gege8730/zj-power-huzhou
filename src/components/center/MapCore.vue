@@ -439,6 +439,8 @@ onMounted(async () => {
             const frame = store.currentConvectionFrame;
             if (!map || !store.isConvectionMode || !store.mapRenderData.convectionData || !frame) {
                 removeConvectionLayers();
+                // 强对流无数据时也要把常规填充层撤掉，避免残留上一场景的热力图
+                if (store.isConvectionMode) removeGridLayer();
                 return;
             }
 
@@ -564,6 +566,9 @@ onMounted(async () => {
         };
 
         const updateGridLayer = () => {
+            // 强对流场景的图层由 ensureConvectionLayers 接管；
+            // 这里直接返回，避免切换瞬间把热力填充层清空导致“地图闪一下”
+            if (store.isConvectionMode) return
             const gridData = store.mapRenderData.gridData
             const colorResources = getColorScaleResources()
             if (!gridData || !zjqxMap || !colorResources) {
@@ -650,6 +655,11 @@ onMounted(async () => {
 watch(() => layoutStore.isMapFullscreen, (isFullscreen) => {
     updateMapSizeDuringLayoutTransition()
     applyFullscreenZoom(isFullscreen)
+})
+
+// 进入强对流专题时收起雷达/地闪/输电线路图层，避免隐藏的图层继续留在地图上
+watch(() => store.isConvectionMode, (isConvection) => {
+    if (isConvection) layerToolbarStore.clearActiveLayer()
 })
 
 // 组件卸载时清理地图实例，防止内存泄漏

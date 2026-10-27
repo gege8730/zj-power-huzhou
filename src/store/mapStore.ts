@@ -10,6 +10,9 @@ export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility'
 /** 产品模式 */
 export type ProductMode = 'live' | 'forecast'
 
+/** 页面场景：常规气象要素 / 强对流专题 */
+export type DashboardScene = 'home' | 'convection'
+
 /** 要素配置 */
 export interface FactorConfig {
   /** 要素类型 */
@@ -137,23 +140,32 @@ const FORECAST_FACTORS: FactorConfig[] = [
   { type: 'cloud', name: '云量', options: ['逐小时'], ele: ['OSS_CLOUD'], stationEle: [''], eleDuration: ['H'], dataUrlTemplate: '/sample/cloud_{time}.json' },
 ]
 
-function cloneFactors(factors: FactorConfig[]) {
-  return factors.map((item) => ({
-    ...item,
-    options: [...item.options],
-    ele: [...item.ele],
-    stationEle: [...item.stationEle],
-    eleDuration: [...item.eleDuration],
-  }))
-}
+/**
+ * 强对流专题要素清单。
+ * 目前只有「风险 / 综合」接入短临告警接口，其余产品的 ele 留空，
+ * 由 DashboardView 统一提示“该产品开发中”。
+ */
+const CONVECTION_FACTORS: FactorConfig[] = [
+  { type: 'convection', name: '风险', options: ['综合', '暴雨', '大风'], ele: ['STRONGCONV_COMPOSITE', '', ''], stationEle: ['', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN'] },
+  { type: 'convection', name: '暴雨', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'] },
+  { type: 'convection', name: '大风', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'] },
+  { type: 'convection', name: '雷达', options: ['实况', '雷达外推'], ele: ['', ''], stationEle: ['', ''], eleDuration: ['H', 'H'] },
+  { type: 'convection', name: '雷电', options: ['实况', '概率预报', '确定性预报'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', 'H', 'H'] },
+  { type: 'convection', name: '冰雹', options: ['概率预报', '确定性预报'], ele: ['', ''], stationEle: ['', ''], eleDuration: ['H', 'H'] },
+]
 
 export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
+  /** 当前页面场景 */
+  const scene = ref<DashboardScene>('home')
+
   /** 产品模式：实况 / 预报 */
   const productMode = ref<ProductMode>('live')
 
-  /** 要素配置列表 */
-  const factors = ref<FactorConfig[]>(cloneFactors(LIVE_FACTORS))
+  /** 要素配置列表：强对流场景使用专题清单，常规场景按实况/预报切换 */
+  const factors = computed<FactorConfig[]>(() => scene.value === 'convection'
+    ? CONVECTION_FACTORS
+    : productMode.value === 'forecast' ? FORECAST_FACTORS : LIVE_FACTORS)
 
   /** 当前选中的主要素类型 */
   const currentFactorType = ref<FactorType>('temperature')
@@ -182,7 +194,7 @@ export const useMapStore = defineStore('map', () => {
     return factor.options[currentOptionIndex.value] || factor.options[0]
   })
 
-  const isConvectionMode = computed(() => productMode.value === 'live' && currentFactor.value.type === 'convection')
+  const isConvectionMode = computed(() => scene.value === 'convection')
 
   // ==================== 时间轴状态 ====================
   /** 时间轴请求参数 */
@@ -238,6 +250,9 @@ export const useMapStore = defineStore('map', () => {
     currentLabel: { dateTime: '', filePath: '' },
   })
   // ==================== 地图数据状态 ====================
+  /** 强对流原始短临告警数据，用于在实况/预报之间重建时间轴 */
+  const convectionSource = ref<ShortTermWarningData | null>(null)
+
   /** 地图渲染数据 */
   const mapRenderData = ref<MapRenderData>({
     gridData: null,
@@ -252,6 +267,9 @@ export const useMapStore = defineStore('map', () => {
   const maptitle = computed (() => {
     if (isConvectionMode.value) {
       const time = dayjs(timeline.value.currentLabel.dateTime || mapRenderData.value.convectionData?.observeTime)
+      if (isForecastMode.value) {
+        return time.isValid() ? `${time.format('YYYY年MM月DD日HH时')} 强对流风险预报图` : '强对流风险预报图'
+      }
       return time.isValid() ? `${time.format('YYYY年MM月DD日HH时mm分')} 强对流风险图` : '强对流风险图'
     }
     if(timelineParams.value.ele == '') return '要素数据开发中...'
@@ -309,24 +327,49 @@ export const useMapStore = defineStore('map', () => {
 
   // ==================== Actions ====================
 
-  async function setNewFactorOption(type: FactorType, optionIndex: number) {
-    const factorIndex = factors.value.findIndex(factor => factor.type === type)
-    if (factorIndex < 0) return
-
-    const nextSelection = `${factorIndex}-${optionIndex}`
-    if (currentFactorType.value === type && currentSelection.value === nextSelection) return
+  /** 切换页面场景（常规 / 强对流） */
+  function setScene(next: DashboardScene) {
+    if (scene.value === next) return
 
     mapDataRequestSerial++
     colorConfigRequestSerial++
-    currentFactorType.value = type
+    scene.value = next
+    productMode.value = 'live'
+    currentFactorType.value = factors.value[0]?.type || 'temperature'
+    currentSelection.value = '0-0'
+    setTimelineLabels([])
+    // 不再清空 gridData / colorConfig：保留旧图层直到新数据到达，
+    // 避免切换场景时填充层被清掉再画回来（视觉上像“地图刷新”）
+    mapRenderData.value.loading = false
+    mapRenderData.value.error = null
+    if (next !== 'convection') {
+      convectionSource.value = null
+      mapRenderData.value.convectionData = null
+    }
+    clearCache()
+  }
+
+  async function setFactorOption(factorIndex: number, optionIndex: number) {
+    const factor = factors.value[factorIndex]
+    if (!factor) return
+
+    const nextSelection = `${factorIndex}-${optionIndex}`
+    if (currentSelection.value === nextSelection) return
+
+    mapDataRequestSerial++
+    colorConfigRequestSerial++
+    currentFactorType.value = factor.type
     currentSelection.value = nextSelection
     mapRenderData.value.colorConfig = null
     mapRenderData.value.gridData = null
     mapRenderData.value.loading = false
-    if (type !== 'convection') {
+    if (isConvectionMode.value) {
+      mapRenderData.value.convectionData = null
+      setTimelineLabels([])
+    } else {
       mapRenderData.value.convectionData = null
     }
-    console.log(`切换到要素 ${type}，选项索引 ${currentSelection.value}`)
+    console.log(`切换到要素 ${factor.name}，选项索引 ${currentSelection.value}`)
   }
 
   /** 设置产品模式 */
@@ -336,7 +379,6 @@ export const useMapStore = defineStore('map', () => {
     mapDataRequestSerial++
     colorConfigRequestSerial++
     productMode.value = mode
-    factors.value = cloneFactors(mode === 'forecast' ? FORECAST_FACTORS : LIVE_FACTORS)
     currentFactorType.value = factors.value[0]?.type || 'temperature'
     currentSelection.value = '0-0'
     setTimelineLabels([])
@@ -346,6 +388,8 @@ export const useMapStore = defineStore('map', () => {
     mapRenderData.value.loading = false
     mapRenderData.value.error = null
     clearCache()
+    // 强对流场景在实况/预报之间切换时，用同一份短临告警数据重建时间轴
+    if (isConvectionMode.value) rebuildConvectionData()
   }
 
   /**
@@ -571,7 +615,13 @@ export const useMapStore = defineStore('map', () => {
   }
 
   function setConvectionWarningData(source: ShortTermWarningData | null | undefined) {
-    const renderData = buildConvectionRenderData(source)
+    convectionSource.value = source ?? null
+    return rebuildConvectionData()
+  }
+
+  /** 按当前产品模式（0-2h 实况 / 0-24h 预报）重建强对流帧与时间轴 */
+  function rebuildConvectionData() {
+    const renderData = buildConvectionRenderData(convectionSource.value, productMode.value)
     mapRenderData.value.convectionData = renderData
     if (!isConvectionMode.value) return renderData
 
@@ -668,6 +718,7 @@ export const useMapStore = defineStore('map', () => {
 
   return {
     // 状态
+    scene,
     factors,
     productMode,
     isForecastMode,
@@ -690,6 +741,7 @@ export const useMapStore = defineStore('map', () => {
     maptitle,
 
     // Actions
+    setScene,
     setProductMode,
     setTimelineIndex,
     setTimelineLabels,
@@ -703,7 +755,7 @@ export const useMapStore = defineStore('map', () => {
     clearCache,
     clearError,
     initTimeline,
-    setNewFactorOption,
+    setFactorOption,
   }
 })
 
@@ -753,11 +805,21 @@ function normalizeAlias(value: string) {
   return String(value || '').trim().toUpperCase()
 }
 
-function buildConvectionRenderData(source: ShortTermWarningData | null | undefined): ConvectionRenderData | null {
+function buildConvectionRenderData(
+  source: ShortTermWarningData | null | undefined,
+  mode: ProductMode = 'live',
+): ConvectionRenderData | null {
   const rows = Array.isArray(source?.warning) ? source.warning : []
   if (!rows.length) return null
 
   const endTime = parseConvectionBaseTime(source?.observeTime || source?.time)
+  return mode === 'forecast'
+    ? buildConvectionForecastFrames(rows, endTime)
+    : buildConvectionLiveFrames(rows, endTime)
+}
+
+/** 0-2h 实况：最近 110 分钟按 10 分钟出 12 帧，取各站当前实况风险 */
+function buildConvectionLiveFrames(rows: ShortTermWarningTown[], endTime: Dayjs): ConvectionRenderData {
   const startTime = endTime.subtract(110, 'minute')
   const timeline = Array.from({ length: 12 }, (_, index) => {
     const time = startTime.add(index * 10, 'minute')
@@ -777,6 +839,66 @@ function buildConvectionRenderData(source: ShortTermWarningData | null | undefin
     timeline,
     frames,
   }
+}
+
+/** 0-24h 预报：按接口 hours[] 的时间逐小时出帧 */
+function buildConvectionForecastFrames(rows: ShortTermWarningTown[], endTime: Dayjs): ConvectionRenderData | null {
+  const frames: Record<string, Record<string, ConvectionRiskLevel>> = {}
+  const frameTimeMap = new Map<string, Dayjs>()
+
+  rows.forEach((row) => {
+    const townKeys = getWarningTownKeys(row)
+    const hours = Array.isArray(row.hours) ? row.hours : []
+    if (!townKeys.length || !hours.length) return
+
+    hours.forEach((hour) => {
+      const time = parseConvectionHourTime(hour.time, endTime)
+      if (!time) return
+
+      const filePath = `convection_${time.format('YYYYMMDDHH0000')}`
+      const frame = frames[filePath] ?? (frames[filePath] = {})
+      const risk = normalizeConvectionRisk(hour.risk)
+      townKeys.forEach((key) => {
+        frame[key] = risk
+      })
+      frameTimeMap.set(filePath, time)
+    })
+  })
+
+  const timeline = Array.from(frameTimeMap.entries())
+    .sort((a, b) => a[1].valueOf() - b[1].valueOf())
+    .map(([filePath, time]) => ({
+      dateTime: time.format('YYYY-MM-DD HH:mm:ss'),
+      filePath,
+    }))
+
+  if (!timeline.length) return null
+
+  return {
+    observeTime: endTime.format('YYYY-MM-DD HH:mm:ss'),
+    timeline,
+    frames,
+  }
+}
+
+/** hours[].time 可能是完整时间，也可能只是 "14:00"，后者按实况日期补全 */
+function parseConvectionHourTime(value: unknown, endTime: Dayjs): Dayjs | null {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+
+  const full = dayjs(raw)
+  if (full.isValid()) return full
+
+  const shortMatch = raw.match(/^(\d{1,2}):(\d{2})$/)
+  if (!shortMatch) return null
+
+  let time = endTime
+    .hour(Number(shortMatch[1]))
+    .minute(Number(shortMatch[2]))
+    .second(0)
+    .millisecond(0)
+  if (time.isBefore(endTime.subtract(12, 'hour'))) time = time.add(1, 'day')
+  return time
 }
 
 function parseConvectionBaseTime(value?: string) {

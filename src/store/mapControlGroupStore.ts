@@ -19,7 +19,7 @@ import { useMapStore } from "./mapStore";
 import type { LayerGroup as DashboardLayerGroup } from "@/types/dashboard";
 
 /** 控件分组标识 */
-export type MapControlGroupKey = "autoStation" | "fill" | "map";
+export type MapControlGroupKey = "autoStation" | "fill" | "map" | "region";
 
 /** 控件子项标识 */
 export type MapControlItemKey =
@@ -30,7 +30,12 @@ export type MapControlItemKey =
   | "countyName"
   | "townBoundary"
   | "townName"
-  | "mapClip";
+  | "mapClip"
+  | "regionHuzhou"
+  | "regionChangxing"
+  | "regionAnji"
+  | "regionWuxing"
+  | "regionNanxun";
 
 /** 自动站接口返回数据 */
 export interface AutoStationItem {
@@ -62,6 +67,10 @@ interface MapControlGroupState {
   title: string;
   switchable: boolean;
   enabled: boolean;
+  /** 子项渲染方式：复选（默认）/ 单选（地区选择） */
+  kind?: "checkbox" | "radio";
+  /** 非开关型分组的折叠状态 */
+  collapsed: boolean;
   items: MapControlItemState[];
 }
 
@@ -86,6 +95,8 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
     title: "自动站",
     switchable: true,
     enabled: true,
+    kind: "checkbox",
+    collapsed: false,
     items: [
       { key: "stationName", name: "站名", checked: true },
       { key: "stationValue", name: "数值", checked: true },
@@ -96,6 +107,8 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
     title: "填色",
     switchable: true,
     enabled: true,
+    kind: "checkbox",
+    collapsed: false,
     items: [{ key: "fillValue", name: "数值", checked: true }],
   },
   {
@@ -103,12 +116,29 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
     title: "地图",
     switchable: false,
     enabled: true,
+    kind: "checkbox",
+    collapsed: false,
     items: [
       { key: "countyBoundary", name: "区(县)界", checked: true },
       { key: "countyName", name: "区(县)名", checked: false },
       { key: "townBoundary", name: "乡镇界", checked: false },
       { key: "townName", name: "乡镇名", checked: false },
       { key: "mapClip", name: "地图裁边", checked: true },
+    ],
+  },
+  {
+    key: "region",
+    title: "地区选择",
+    switchable: false,
+    enabled: true,
+    kind: "radio",
+    collapsed: false,
+    items: [
+      { key: "regionHuzhou", name: "湖州", checked: true },
+      { key: "regionChangxing", name: "长兴", checked: false },
+      { key: "regionAnji", name: "安吉", checked: false },
+      { key: "regionWuxing", name: "吴兴", checked: false },
+      { key: "regionNanxun", name: "南浔", checked: false },
     ],
   },
 ];
@@ -188,7 +218,7 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   let townBoundaryLayer: ControlVectorLayer | null = null;
   let townNameLayer: ControlTextLayer | null = null;
 
-  const autoStationDisabled = computed(() => useMapStore().isForecastMode);
+  const autoStationDisabled = computed(() => useMapStore().isForecastMode || useMapStore().isConvectionMode);
   const autoStationEnabled = computed(
     () =>
       !autoStationDisabled.value && (getGroup("autoStation")?.enabled ?? true),
@@ -214,6 +244,22 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   );
   const townNameVisible = computed(() => getItem("townName")?.checked ?? false);
   const mapClipEnabled = computed(() => getItem("mapClip")?.checked ?? true);
+
+  /** 强对流专题只保留 填色/地图/地区选择；常规场景不展示地区选择 */
+  const visibleGroups = computed(() => {
+    const mapStore = useMapStore();
+    return groups.value.filter((group) => {
+      if (group.key === "autoStation") return !mapStore.isConvectionMode;
+      if (group.key === "region") return mapStore.isConvectionMode;
+      return true;
+    });
+  });
+
+  /** 当前选中的地区（仅强对流专题使用） */
+  const selectedRegion = computed(() => {
+    const group = getGroup("region");
+    return group?.items.find((item) => item.checked)?.name ?? "";
+  });
 
   /** 用页面原有 layerGroups 初始化控件文案和默认勾选状态 */
   function initFromGroups(sourceGroups: DashboardLayerGroup[] = []) {
@@ -297,6 +343,30 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
       if (group.enabled) loadStationDataByCurrentTime();
       return;
     }
+  }
+
+  /** 非开关型分组（地图 / 地区选择）的折叠切换 */
+  function toggleGroupCollapse(key: MapControlGroupKey) {
+    const group = getGroup(key);
+    if (!group || group.switchable) return;
+    group.collapsed = !group.collapsed;
+  }
+
+  /** 折叠入口：地图组只在强对流专题下提供，避免影响首页原有布局 */
+  function isGroupCollapsible(key: MapControlGroupKey) {
+    const group = getGroup(key);
+    if (!group || group.switchable) return false;
+    if (key === "region") return true;
+    return useMapStore().isConvectionMode;
+  }
+
+  /** 地区选择：单选 */
+  function selectRegionItem(key: MapControlItemKey) {
+    const group = getGroup("region");
+    if (!group) return;
+    group.items.forEach((item) => {
+      item.checked = item.key === key;
+    });
   }
 
   function toggleItem(key: MapControlItemKey) {
@@ -657,6 +727,7 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   function shouldShowItems(key: MapControlGroupKey) {
     const group = getGroup(key);
     if (!group) return false;
+    if (group.collapsed) return false;
     if (!group.switchable) return true;
     return isGroupEnabled(key);
   }
@@ -770,6 +841,8 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
 
   return {
     groups,
+    visibleGroups,
+    selectedRegion,
     stationTimeline,
     stationData,
     stationLoading,
@@ -789,7 +862,10 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     initFromGroups,
     setMap,
     toggleGroup,
+    toggleGroupCollapse,
+    isGroupCollapsible,
     toggleItem,
+    selectRegionItem,
     isGroupDisabled,
     isGroupEnabled,
     shouldShowItems,

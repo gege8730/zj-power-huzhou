@@ -64,6 +64,13 @@ const timelinelist = computed(() => props.timeline.map(item => {
   const date = dayjs(item.dateTime)
   let time, day
 
+  // 强对流专题：实况按 10 分钟短临出帧，预报按逐小时出帧
+  if (store.isConvectionMode) {
+    time = store.productMode === 'forecast' ? `${date.hour()}时` : date.format('HH:mm')
+    day = date.format('M月D日HH:mm')
+    return { time, day, riskClass: getConvectionRiskClass(item.filePath) }
+  }
+
   if (duration == 'D' || duration == '24H') {
     time = `${date.format('D日')}`
     day = `${date.format('M月D日HH时')}`

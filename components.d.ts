@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     BasePanel: typeof import('./src/components/common/BasePanel.vue')['default']
+    ConvectionPresetPanel: typeof import('./src/components/left/ConvectionPresetPanel.vue')['default']
     EChart: typeof import('./src/components/common/EChart.vue')['default']
     ElAutoResizer: typeof import('element-plus/es')['ElAutoResizer']
     ElButton: typeof import('element-plus/es')['ElButton']

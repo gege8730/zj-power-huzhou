@@ -1,7 +1,12 @@
 <template>
   <aside class="left-sidebar fade-in">
     <WeatherFactorsPanel :factors="factors" />
-    <WeatherForecastPanel :forecast-text="forecastText" :days="days" />
+    <WeatherForecastPanel
+      v-if="!convection"
+      :forecast-text="forecastText"
+      :days="days"
+    />
+    <ConvectionPresetPanel v-else />
   </aside>
 </template>
 
@@ -10,11 +15,13 @@ import type { ForecastDay } from '../../types/dashboard'
 import type { FactorConfig } from '@/store'
 import WeatherFactorsPanel from './WeatherFactorsPanel.vue'
 import WeatherForecastPanel from './WeatherForecastPanel.vue'
+import ConvectionPresetPanel from './ConvectionPresetPanel.vue'
 
 defineProps<{
   factors: FactorConfig[]
   forecastText: string
   days: ForecastDay[]
+  convection?: boolean
 }>()
 </script>
 

@@ -3,12 +3,14 @@
     <div class="dashboard">
       <div class="app-layer" :class="{ 'map-fullscreen': layoutStore.isMapFullscreen }" v-if="initData">
         <TopHeader />
-        <LeftSidebar :factors="store.factors" :forecast-text="initData.forecastText" :days="initData.forecastDays" />
+        <LeftSidebar :factors="store.factors" :forecast-text="initData.forecastText" :days="initData.forecastDays"
+          :convection="store.isConvectionMode" />
         <MapStage :title="initData.mapTitle" :query-placeholder="initData.queryPlaceholder" :toolbar="initData.toolbar"
           :active-toolbar="initData.activeToolbar" :layer-groups="initData.layerGroups" :timeline="initData.timeline" />
         <RightSidebar :warning="initData.warning" :similar-days="initData.similarDays"
           :similar-date="similarDate"
           :material-tabs="initData.materialTabs" :material-files="initData.materialFiles"
+          :convection="store.isConvectionMode"
           @preview-material="handlePreviewMaterial" />
         <PdfPreviewDialog
           v-model="pdfPreviewVisible"
@@ -34,9 +36,12 @@ import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
 import { useLayoutStore, useMapStore } from '@/store'
 import dayjs from 'dayjs'
+import { useRoute } from 'vue-router'
 
 const store = useMapStore()
 const layoutStore = useLayoutStore()
+const route = useRoute()
+
 const initData = ref(rawMock as unknown as DashboardMock)
 const similarDate = ref('相似日')
 const pdfPreviewVisible = ref(false)
@@ -71,10 +76,21 @@ const fetchData = async () => {
   const requestProductMode = store.productMode
   const requestSelection = store.currentSelection
   if (store.isConvectionMode) {
+    // 未接入接口的产品（暴雨/大风/雷达/雷电/冰雹 等）先给占位提示
+    if (store.timelineParams.ele === '') {
+      store.setConvectionWarningData(null)
+      ElMessage.warning('该产品开发中')
+      initData.value.timeline = []
+      initData.value.mapTitle = store.maptitle
+      return
+    }
     await fetchWaringData()
     if (!isTimelineRequestCurrent(requestSerial, requestProductMode, requestSelection)) return
     initData.value.timeline = store.timeline.labels
     initData.value.mapTitle = store.maptitle
+    if (store.productMode === 'forecast' && !store.timeline.labels.length) {
+      ElMessage.warning('强对流预报数据开发中')
+    }
     return
   }
   // 判断 ele 参数是否为空字符串
@@ -273,8 +289,20 @@ const initAppData = async () => {
   }
 }
 
+// URL 是场景的唯一来源：刷新、前进后退、直达链接都能落到正确场景
+watch(() => route.query.scene, (scene) => {
+  const next = scene === 'convection' ? 'convection' : 'home'
+  if (store.scene !== next) store.setScene(next)
+}, { immediate: true })
+
 onMounted(async () => {
   await initAppData()
+  await store.loadCurrentColorConfig()
+  await fetchData()
+})
+watch(() => store.scene, async () => {
+  initData.value.mapTitle = store.maptitle
+  // 场景切换会清空色标，回到常规场景必须重新拉一次，否则温度色标不回来
   await store.loadCurrentColorConfig()
   await fetchData()
 })

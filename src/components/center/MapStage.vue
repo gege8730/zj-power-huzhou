@@ -6,7 +6,7 @@
 
     <WeatherWarningNotice />
     <MapControlGroup :groups="layerGroups" />
-    <LayerToolbar :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
+    <LayerToolbar v-if="!store.isConvectionMode" :items="toolbar" :active="activeToolbar" :query-placeholder="queryPlaceholder" />
     <MapCore class="map-canvas" />
     <TemperatureLegend />
     <div v-if="store.isConvectionMode && store.mapRenderData.convectionData" class="convection-risk-legend">
@@ -17,8 +17,8 @@
     </div>
 
     <div class="map-bottom-tabs">
-      <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">☀ 实况</button>
-      <button class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">☁ 预报</button>
+      <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">{{ liveTabLabel }}</button>
+      <button class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">{{ forecastTabLabel }}</button>
       <!-- <div class="datepicker-wrapper">
         <el-date-picker
           v-model="baseTimeModel"
@@ -48,6 +48,10 @@ import WeatherWarningNotice from './WeatherWarningNotice.vue'
 import { useMapStore } from '@/store'
 
 const store = useMapStore()
+
+/** 强对流专题底部只区分短临时段，文案与设计稿保持一致 */
+const liveTabLabel = computed(() => (store.isConvectionMode ? '0-2h（实况）' : '☀ 实况'))
+const forecastTabLabel = computed(() => (store.isConvectionMode ? '0-24h（预报）' : '☁ 预报'))
 
 /** 桥接 Date <-> dayjs，v-model 返回的是 Date 对象 */
 const baseTimeModel = computed<Date>({
