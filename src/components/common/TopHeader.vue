@@ -19,19 +19,22 @@
       <div class="home" style="cursor: not-allowed">
         <span>新能源</span>
       </div>
+      <div class="home" style="cursor: not-allowed">
+        <span>台风</span>
+      </div>
     </div>
     <div class="right_tab">
       <div
         class="query_pivot"
         style="cursor: not-allowed"
       >
-        <span>台风</span>
+        <span>地质灾害</span>
       </div>
       <div
         class="query_pivot"
         style="cursor: not-allowed"
       >
-        <span>地质灾害</span>
+        <span>重要材料</span>
       </div>
       <div
         class="query_pivot"
@@ -130,6 +133,20 @@ onUnmounted(() => {
 </script>
 <style lang="less" scoped>
 .top-header {
+  --tab-active-bg:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 226, 120, 0.95) 50%,
+      transparent
+    )
+    center bottom / 70% 2px no-repeat,
+    linear-gradient(
+      180deg,
+      rgba(214, 190, 70, 0) 0%,
+      rgba(214, 190, 70, 0.28) 45%,
+      rgba(222, 196, 74, 0.72) 100%
+    );
   grid-column: 1 / -1;
   grid-row: 1;
   position: relative;
@@ -246,7 +263,7 @@ onUnmounted(() => {
   // align-items: center;
   // justify-content: center;
   // gap: 0.3rem;
-  width: 33.33%;
+  width: 25%;
   // height: clamp(2.6rem,1vh, 12.32rem);
   // background: url('../../assets/home/tab_left.png') no-repeat;
   // background-size: 100% 100%;
@@ -264,33 +281,9 @@ onUnmounted(() => {
   }
   &.active {
     color: #fff;
-    background-color: transparent;
-    background-image:
-      radial-gradient(
-        70% 14px at 50% 100%,
-        rgba(34, 167, 255, 0.45),
-        transparent 70%
-      ),
-      linear-gradient(
-        90deg,
-        transparent,
-        rgba(120, 210, 255, 0.85) 50%,
-        transparent
-      ),
-      linear-gradient(
-        180deg,
-        rgba(42, 100, 157, 0) 0%,
-        rgba(24, 127, 246, 0.69) 100%
-      );
-    background-size:
-      100% 100%,
-      60% 1px,
-      100% 100%;
-    background-position:
-      center bottom,
-      center bottom,
-      center center;
-    background-repeat: no-repeat;
+    font-weight: 600;
+    // text-shadow: 0 0 8px rgba(255, 226, 120, 0.7);
+    background: var(--tab-active-bg);
   }
 }
 .right_tab {
@@ -336,33 +329,9 @@ onUnmounted(() => {
   }
   &.active {
     color: #fff;
-     background-color: transparent;
-    background-image:
-      radial-gradient(
-        70% 14px at 50% 100%,
-        rgba(34, 167, 255, 0.45),
-        transparent 70%
-      ),
-      linear-gradient(
-        90deg,
-        transparent,
-        rgba(120, 210, 255, 0.85) 50%,
-        transparent
-      ),
-      linear-gradient(
-        180deg,
-        rgba(42, 100, 157, 0) 0%,
-        rgba(24, 127, 246, 0.69) 100%
-      );
-    background-size:
-      100% 100%,
-      60% 1px,
-      100% 100%;
-    background-position:
-      center bottom,
-      center bottom,
-      center center;
-    background-repeat: no-repeat;
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(255, 226, 120, 0.7);
+    background: var(--tab-active-bg);
   }
 }
 .title-wrap {

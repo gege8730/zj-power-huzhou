@@ -6,7 +6,9 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { fromLonLat, transformExtent } from 'ol/proj';
+import { fromLonLat, transform, transformExtent } from 'ol/proj';
+import { getRenderPixel } from 'ol/render.js';
+import { apply as applyTransform } from 'ol/transform.js';
 import Feature from 'ol/Feature.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import VectorLayer from 'ol/layer/Vector.js';
@@ -550,6 +552,48 @@ onMounted(async () => {
             source.changed();
         };
 
+        /** 强对流乡镇面层没有栅格裁剪能力：按“地图裁边”开关，用湖州市界对 canvas 做裁剪 */
+        let cityClipPolygons: LonLatPolygon[] | null = null;
+        const attachConvectionClip = (targetLayer: ConvectionVectorLayer) => {
+            let clipped = false;
+
+            targetLayer.on('prerender', (event: any) => {
+                clipped = false;
+                const map = getOpenLayersMap();
+                const ctx = event.context as CanvasRenderingContext2D | undefined;
+                const frameState = event.frameState;
+                if (!map || !ctx || !frameState || !mapControlStore.mapClipEnabled) return;
+
+                cityClipPolygons ??= collectRegionPolygons(adminBoundary);
+                if (!cityClipPolygons.length) return;
+
+                const projection = map.getView().getProjection();
+                const pixel: number[] = [0, 0];
+                ctx.save();
+                ctx.beginPath();
+                cityClipPolygons.forEach((rings) => rings.forEach((ring) => {
+                    ring.forEach((point, index) => {
+                        const coordinate = transform(point, 'EPSG:4326', projection);
+                        pixel[0] = coordinate[0];
+                        pixel[1] = coordinate[1];
+                        applyTransform(frameState.coordinateToPixelTransform, pixel);
+                        const [x, y] = getRenderPixel(event, pixel);
+                        if (index === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.closePath();
+                }));
+                ctx.clip();
+                clipped = true;
+            });
+
+            targetLayer.on('postrender', (event: any) => {
+                if (!clipped) return;
+                (event.context as CanvasRenderingContext2D).restore();
+                clipped = false;
+            });
+        };
+
         const ensureConvectionLayers = () => {
             const map = getOpenLayersMap();
             const frame = store.currentConvectionFrame;
@@ -575,6 +619,7 @@ onMounted(async () => {
                     updateWhileAnimating: true,
                     updateWhileInteracting: true,
                 });
+                attachConvectionClip(convectionTownLayer);
                 map.addLayer(convectionTownLayer);
             } else if (!map.getLayers().getArray().includes(convectionTownLayer)) {
                 map.addLayer(convectionTownLayer);
@@ -863,6 +908,7 @@ onMounted(async () => {
 
         watch(() => mapControlStore.mapClipEnabled, () => {
             applyGridClip();
+            convectionTownLayer?.changed();
         }, { immediate: true });
 
         watch(() => [
