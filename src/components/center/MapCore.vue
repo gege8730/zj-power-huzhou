@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, transformExtent } from 'ol/proj';
 import Feature from 'ol/Feature.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import VectorLayer from 'ol/layer/Vector.js';
@@ -46,6 +46,16 @@ const geoJsonFormat = new GeoJSON();
 const CONVECTION_RISK_COLORS = ['#52cf93', '#ffda5a', '#f14b57'] as const;
 const VISIBILITY_RENDER_SCALE = 1000;
 const COLOR_SCALE_UNDERFLOW_VALUE = -999999;
+/** 地区下钻：遮罩、视角动画相关参数 */
+const REGION_MASK_COLOR = 'rgba(3, 17, 34, 0.9)';
+const REGION_MASK_Z_INDEX = 600;
+const REGION_MASK_FADE_DURATION = 320;
+const REGION_VIEW_DURATION = 620;
+const REGION_VIEW_MAX_ZOOM = 12.4;
+const REGION_VIEW_PANEL_GAP = 16;
+const REGION_VIEW_PADDING = { top: 0.09, right: 0.08, bottom: 0.11, left: 0.08 };
+/** 遮罩外环向外扩张的经纬度范围，保证缩到最小级别时也能盖住整个视野 */
+const REGION_MASK_MARGIN = 15;
 
 type ConvectionVectorLayer = VectorLayer<VectorSource<Feature>>;
 
@@ -173,17 +183,118 @@ const setMapZoom = (zoom: number, animate = true) => {
     }
 }
 
-const applyFullscreenZoom = (isFullscreen: boolean) => {
-    const targetZoom = isFullscreen ? FULLSCREEN_MAP_ZOOM : NORMAL_MAP_ZOOM
-
+const applyFullscreenZoom = () => {
     nextTick(() => {
         updateMapSize()
-        setMapZoom(targetZoom)
+        refreshMapView(true)
         window.setTimeout(() => {
             updateMapSize()
-            setMapZoom(targetZoom, false)
+            refreshMapView(false)
         }, LAYOUT_TRANSITION_DURATION)
     })
+}
+
+/** 地区下钻用的经纬度环面结构：面 = [外环, 内环...]，环 = [[lng, lat], ...] */
+type LonLatPolygon = number[][][]
+
+/** 把地区选择里的 GeoJSON 统一整理成经纬度面集合 */
+const collectRegionPolygons = (geojson: any): LonLatPolygon[] => {
+    const polygons: LonLatPolygon[] = []
+
+    const pushPolygon = (coordinates: any) => {
+        if (!Array.isArray(coordinates)) return
+        const rings = coordinates.map(closeRing).filter(Boolean) as number[][][]
+        if (rings.length) polygons.push(rings)
+    }
+
+    const features = Array.isArray(geojson?.features) ? geojson.features : []
+    features.forEach((feature: any) => {
+        const geometry = feature?.geometry
+        if (geometry?.type === 'Polygon') pushPolygon(geometry.coordinates)
+        if (geometry?.type === 'MultiPolygon') geometry.coordinates.forEach(pushPolygon)
+    })
+
+    return polygons
+}
+
+const getRegionPolygonsLonLatExtent = (polygons: LonLatPolygon[]) => {
+    let minLng = Number.POSITIVE_INFINITY
+    let maxLng = Number.NEGATIVE_INFINITY
+    let minLat = Number.POSITIVE_INFINITY
+    let maxLat = Number.NEGATIVE_INFINITY
+
+    polygons.forEach((rings) => rings.forEach((ring) => ring.forEach((point) => {
+        const lng = Number(point[0])
+        const lat = Number(point[1])
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return
+        minLng = Math.min(minLng, lng)
+        maxLng = Math.max(maxLng, lng)
+        minLat = Math.min(minLat, lat)
+        maxLat = Math.max(maxLat, lat)
+    })))
+
+    return [minLng, minLat, maxLng, maxLat] as [number, number, number, number]
+}
+
+/** 下钻定位时的可视区留白：按地图舞台（左右栏之间）而不是整屏计算，避免区县被侧栏挡住 */
+const getRegionFitPadding = (mapSize: number[]) => {
+    const [width = 0, height = 0] = mapSize
+    const basePadding = [
+        height * REGION_VIEW_PADDING.top,
+        width * REGION_VIEW_PADDING.right,
+        height * REGION_VIEW_PADDING.bottom,
+        width * REGION_VIEW_PADDING.left,
+    ]
+
+    const mapArea = mapContainer.value
+    const stage = mapArea?.closest('.map-stage') as HTMLElement | null
+    if (!mapArea || !stage) return basePadding
+
+    const areaRect = mapArea.getBoundingClientRect()
+    const stageRect = stage.getBoundingClientRect()
+    const panelRect = document.querySelector('.control-groups')?.getBoundingClientRect()
+
+    return [
+        Math.max(basePadding[0], stageRect.top - areaRect.top),
+        Math.max(basePadding[1], areaRect.right - stageRect.right),
+        Math.max(basePadding[2], areaRect.bottom - stageRect.bottom),
+        Math.max(basePadding[3], (panelRect?.right ?? stageRect.left) - areaRect.left + REGION_VIEW_PANEL_GAP),
+    ]
+}
+
+/** 视角切到下钻区县：按区县范围做带动画的定位 */
+const fitRegionExtent = (polygons: LonLatPolygon[], animate = true) => {
+    const map = getOpenLayersMap() as any
+    const view = getOpenLayersView() as any
+    if (!map || !view || typeof view.fit !== 'function') return
+
+    const [minLng, minLat, maxLng, maxLat] = getRegionPolygonsLonLatExtent(polygons)
+    if (!Number.isFinite(minLng) || !Number.isFinite(minLat)) return
+
+    const projection = view.getProjection?.() || 'EPSG:3857'
+    const extent = transformExtent([minLng, minLat, maxLng, maxLat], 'EPSG:4326', projection)
+    const padding = getRegionFitPadding(map.getSize?.() || [])
+
+    view.fit(extent, {
+        padding,
+        maxZoom: REGION_VIEW_MAX_ZOOM,
+        duration: animate ? REGION_VIEW_DURATION : 0,
+    })
+}
+
+/** 回到整个湖州的默认视角 */
+const setCityView = (animate = true) => {
+    setMapZoom(layoutStore.isMapFullscreen ? FULLSCREEN_MAP_ZOOM : NORMAL_MAP_ZOOM, animate)
+}
+
+/** 当前地区的目标视角：下钻时贴合区县范围，否则回到整个湖州 */
+const refreshMapView = (animate = true) => {
+    const polygons = collectRegionPolygons(mapControlStore.selectedRegionBoundary)
+    if (polygons.length) {
+        fitRegionExtent(polygons, animate)
+        return
+    }
+    setCityView(animate)
 }
 
 onMounted(async () => {
@@ -235,6 +346,10 @@ onMounted(async () => {
         let visibilityValueLayer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
         let convectionTownLayer: ConvectionVectorLayer | null = null;
         let convectionOutlineLayer: ConvectionVectorLayer | null = null;
+        let regionMaskLayer: ConvectionVectorLayer | null = null;
+        let regionMaskAnimation = 0;
+        let outlineRegionKey: string | null = null;
+        let cityOutlineFeatures: Feature[] = [];
 
         const getGridControlOptions = (options: {
             fillEnabled?: boolean
@@ -418,6 +533,7 @@ onMounted(async () => {
             }
             convectionTownLayer = null;
             convectionOutlineLayer = null;
+            outlineRegionKey = null;
         };
 
         const updateConvectionFeatureRisk = () => {
@@ -465,23 +581,138 @@ onMounted(async () => {
             }
 
             if (!convectionOutlineLayer) {
-                const outlineFeatures = geoJsonFormat.readFeatures(adminBoundary as any, {
+                cityOutlineFeatures = geoJsonFormat.readFeatures(adminBoundary as any, {
                     dataProjection: 'EPSG:4326',
                     featureProjection: map.getView().getProjection(),
                 }) as Feature[];
                 convectionOutlineLayer = new VectorLayer({
-                    source: new VectorSource({ features: outlineFeatures }),
+                    source: new VectorSource({ features: cityOutlineFeatures }),
                     style: convectionOutlineStyle,
                     zIndex: 331,
                     updateWhileAnimating: true,
                     updateWhileInteracting: true,
                 });
                 map.addLayer(convectionOutlineLayer);
+                outlineRegionKey = mapControlStore.selectedRegionKey === 'regionHuzhou' ? 'regionHuzhou' : null;
             } else if (!map.getLayers().getArray().includes(convectionOutlineLayer)) {
                 map.addLayer(convectionOutlineLayer);
             }
 
+            syncConvectionOutline();
             updateConvectionFeatureRisk();
+        };
+
+        /** 描边层：下钻时描区县轮廓，否则描湖州全市轮廓 */
+        const syncConvectionOutline = () => {
+            if (!convectionOutlineLayer) return;
+
+            const regionKey = mapControlStore.selectedRegionKey;
+            if (outlineRegionKey === regionKey) return;
+
+            const boundary = mapControlStore.selectedRegionBoundary;
+            if (regionKey !== 'regionHuzhou' && !boundary) return;
+
+            const features = boundary
+                ? geoJsonFormat.readFeatures(boundary, {
+                    dataProjection: 'EPSG:4326',
+                    featureProjection: getOpenLayersMap()?.getView().getProjection(),
+                }) as Feature[]
+                : cityOutlineFeatures;
+
+            if (!features.length) return;
+            convectionOutlineLayer.setSource(new VectorSource({ features }));
+            outlineRegionKey = regionKey;
+        };
+
+        /** 区县遮罩：整个画面挖空下钻区县，其余区域压暗，实现“只展示当前区县” */
+        const createRegionMaskFeature = (polygons: LonLatPolygon[]) => {
+            const [minLng, minLat, maxLng, maxLat] = getRegionPolygonsLonLatExtent(polygons);
+            const margin = REGION_MASK_MARGIN;
+            const outerRing = [
+                [minLng - margin, minLat - margin],
+                [maxLng + margin, minLat - margin],
+                [maxLng + margin, maxLat + margin],
+                [minLng - margin, maxLat + margin],
+                [minLng - margin, minLat - margin],
+            ];
+            const geometry = geoJsonFormat.readGeometry({
+                type: 'Polygon',
+                coordinates: [outerRing, ...polygons.map((rings) => rings[0])],
+            }, {
+                dataProjection: 'EPSG:4326',
+                featureProjection: getOpenLayersMap()?.getView().getProjection(),
+            });
+            return new Feature(geometry as any);
+        };
+
+        const animateRegionMaskOpacity = (target: number) => {
+            const targetLayer = regionMaskLayer;
+            if (!targetLayer) return;
+
+            if (regionMaskAnimation) cancelAnimationFrame(regionMaskAnimation);
+            const start = targetLayer.getOpacity();
+            const startTime = performance.now();
+            const step = () => {
+                const progress = Math.min(1, (performance.now() - startTime) / REGION_MASK_FADE_DURATION);
+                targetLayer.setOpacity(start + (target - start) * progress);
+                if (progress < 1) regionMaskAnimation = requestAnimationFrame(step);
+            };
+            regionMaskAnimation = requestAnimationFrame(step);
+        };
+
+        const updateRegionMask = (polygons: LonLatPolygon[]) => {
+            const map = getOpenLayersMap();
+            if (!map) return;
+
+            const feature = createRegionMaskFeature(polygons);
+            if (!regionMaskLayer) {
+                regionMaskLayer = new VectorLayer({
+                    source: new VectorSource({ features: [feature] }),
+                    style: new Style({ fill: new Fill({ color: REGION_MASK_COLOR }) }),
+                    zIndex: REGION_MASK_Z_INDEX,
+                    opacity: 0,
+                    updateWhileAnimating: true,
+                    updateWhileInteracting: true,
+                });
+                map.addLayer(regionMaskLayer);
+            } else {
+                regionMaskLayer.setSource(new VectorSource({ features: [feature] }));
+                regionMaskLayer.setOpacity(0);
+                if (!map.getLayers().getArray().includes(regionMaskLayer)) {
+                    map.addLayer(regionMaskLayer);
+                }
+            }
+            animateRegionMaskOpacity(1);
+        };
+
+        const removeRegionMask = () => {
+            if (regionMaskAnimation) {
+                cancelAnimationFrame(regionMaskAnimation);
+                regionMaskAnimation = 0;
+            }
+            const map = getOpenLayersMap();
+            if (regionMaskLayer && map?.getLayers().getArray().includes(regionMaskLayer)) {
+                map.removeLayer(regionMaskLayer);
+            }
+            regionMaskLayer = null;
+        };
+
+        /** 地区选择变化：切换区县时做一次带动画的下钻，回到湖州时恢复全市 */
+        const applyRegionDrilldown = (animate = true) => {
+            if (mapControlStore.isRegionDrilldown && !mapControlStore.selectedRegionBoundary) {
+                void mapControlStore.loadCountyAreaResources();
+                return;
+            }
+
+            const polygons = collectRegionPolygons(mapControlStore.selectedRegionBoundary);
+            if (polygons.length) {
+                updateRegionMask(polygons);
+            } else {
+                removeRegionMask();
+            }
+
+            syncConvectionOutline();
+            refreshMapView(animate);
         };
 
         const applyGridControlOptions = () => {
@@ -635,6 +866,13 @@ onMounted(async () => {
         }, { immediate: true });
 
         watch(() => [
+            mapControlStore.selectedRegionKey,
+            mapControlStore.selectedRegionBoundary,
+        ], () => {
+            applyRegionDrilldown(true);
+        }, { immediate: true });
+
+        watch(() => [
             store.timeline.currentLabel?.dateTime,
             store.timeline.currentLabel?.filePath,
             store.currentSelection,
@@ -652,14 +890,16 @@ onMounted(async () => {
 });
 
 
-watch(() => layoutStore.isMapFullscreen, (isFullscreen) => {
+watch(() => layoutStore.isMapFullscreen, () => {
     updateMapSizeDuringLayoutTransition()
-    applyFullscreenZoom(isFullscreen)
+    applyFullscreenZoom()
 })
 
-// 进入强对流专题时收起雷达/地闪/输电线路图层，避免隐藏的图层继续留在地图上
+// 进入强对流专题时收起雷达/地闪/输电线路图层，避免隐藏的图层继续留在地图上；
+// 退出专题时地区选择回到整个湖州
 watch(() => store.isConvectionMode, (isConvection) => {
     if (isConvection) layerToolbarStore.clearActiveLayer()
+    else mapControlStore.resetRegion()
 })
 
 // 组件卸载时清理地图实例，防止内存泄漏

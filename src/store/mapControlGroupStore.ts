@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { defineStore } from "pinia";
 import { ElMessage } from "element-plus";
 import dayjs from "dayjs";
@@ -35,7 +35,8 @@ export type MapControlItemKey =
   | "regionChangxing"
   | "regionAnji"
   | "regionWuxing"
-  | "regionNanxun";
+  | "regionNanxun"
+  | "regionDeqing";
 
 /** 自动站接口返回数据 */
 export interface AutoStationItem {
@@ -139,11 +140,26 @@ const DEFAULT_CONTROL_GROUPS: MapControlGroupState[] = [
       { key: "regionAnji", name: "安吉", checked: false },
       { key: "regionWuxing", name: "吴兴", checked: false },
       { key: "regionNanxun", name: "南浔", checked: false },
+      { key: "regionDeqing", name: "德清", checked: false },
     ],
   },
 ];
 
+/**
+ * 地区选择下钻配置：区县 key → 县区面数据 adcode 的前 6 位。
+ * 南太湖新区在县区面数据里独立成块（330509900），展示吴兴时并入吴兴。
+ */
+const REGION_DRILLDOWN_CODES: Record<string, string[]> = {
+  regionHuzhou: [],
+  regionChangxing: ["330522"],
+  regionAnji: ["330523"],
+  regionWuxing: ["330502", "330509"],
+  regionNanxun: ["330503"],
+  regionDeqing: ["330521"],
+};
+
 const COUNTY_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/country_bounder.geojson`;
+const COUNTY_AREA_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/huz_county.geojson`;
 const COUNTY_LONLAT_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/lonlat.json`;
 const TOWN_BOUNDARY_URL = `${import.meta.env.VITE_APP_BASE_URL}/sample/town_bounder.geojson`;
 
@@ -204,8 +220,14 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   /** 乡镇界数据 */
   const townBoundaryData = shallowRef<any | null>(null);
 
+  /** 县区面数据：地区选择下钻时用于裁剪、遮罩和视角定位 */
+  const countyAreaData = shallowRef<any | null>(null);
+
   /** 地图资源加载状态 */
   const countyLoading = ref(false);
+
+  /** 县区面数据加载状态 */
+  const countyAreaLoading = ref(false);
 
   /** 乡镇资源加载状态 */
   const townLoading = ref(false);
@@ -259,6 +281,51 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   const selectedRegion = computed(() => {
     const group = getGroup("region");
     return group?.items.find((item) => item.checked)?.name ?? "";
+  });
+
+  /** 当前选中的地区 key */
+  const selectedRegionKey = computed<MapControlItemKey>(
+    () =>
+      (getGroup("region")?.items.find((item) => item.checked)?.key ??
+        "regionHuzhou") as MapControlItemKey,
+  );
+
+  /** 是否已下钻到某个区县 */
+  const isRegionDrilldown = computed(
+    () => (REGION_DRILLDOWN_CODES[selectedRegionKey.value]?.length ?? 0) > 0,
+  );
+
+  /** 下钻区县对应的县区面数据，展示整个湖州时为 null */
+  const selectedRegionBoundary = computed(() => {
+    const codes = REGION_DRILLDOWN_CODES[selectedRegionKey.value] ?? [];
+    const features = countyAreaData.value?.features;
+    if (!codes.length || !Array.isArray(features)) return null;
+
+    const matched = features.filter((feature: any) => {
+      const code = String(
+        feature?.properties?.adcode ?? feature?.properties?.GNID ?? "",
+      ).slice(0, 6);
+      return codes.includes(code);
+    });
+
+    return matched.length
+      ? { type: "FeatureCollection", features: matched }
+      : null;
+  });
+
+  /** 下钻时区县名、乡镇名等文字标注只保留落在当前区县内的 */
+  function isPointInSelectedRegion(lng: number, lat: number) {
+    const boundary = selectedRegionBoundary.value;
+    if (!boundary) return true;
+    return boundary.features.some((feature: any) =>
+      geometryContainsPoint(feature?.geometry, lng, lat),
+    );
+  }
+
+  /** 切换地区后重建文字标注，避免邻区名称浮在遮罩上 */
+  watch(selectedRegionBoundary, () => {
+    if (countyBoundaryData.value) renderCountyLayers();
+    if (townBoundaryData.value) renderTownLayers();
   });
 
   /** 用页面原有 layerGroups 初始化控件文案和默认勾选状态 */
@@ -360,13 +427,26 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     return useMapStore().isConvectionMode;
   }
 
-  /** 地区选择：单选 */
+  /** 地区选择：单选；选中区县时同步加载下钻所需的县区面数据 */
   function selectRegionItem(key: MapControlItemKey) {
     const group = getGroup("region");
     if (!group) return;
+
+    const target = group.items.find((item) => item.key === key);
+    if (!target || target.checked) return;
+
     group.items.forEach((item) => {
       item.checked = item.key === key;
     });
+
+    if ((REGION_DRILLDOWN_CODES[key]?.length ?? 0) > 0) {
+      void loadCountyAreaResources();
+    }
+  }
+
+  /** 回到整个湖州 */
+  function resetRegion() {
+    selectRegionItem("regionHuzhou");
   }
 
   function toggleItem(key: MapControlItemKey) {
@@ -526,6 +606,27 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     }
   }
 
+  /** 加载下钻用的县区面数据 */
+  async function loadCountyAreaResources() {
+    if (countyAreaData.value || countyAreaLoading.value) return countyAreaData.value;
+
+    countyAreaLoading.value = true;
+    try {
+      const response = await fetch(COUNTY_AREA_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${COUNTY_AREA_URL}: ${response.status}`);
+      }
+      countyAreaData.value = await response.json();
+    } catch (error) {
+      console.error("县区面数据加载失败:", error);
+      ElMessage.error("县区面数据加载失败");
+    } finally {
+      countyAreaLoading.value = false;
+    }
+
+    return countyAreaData.value;
+  }
+
   /** 加载乡镇界资源 */
   async function loadTownResources() {
     if (!getOpenLayersMap() || townLoading.value) return;
@@ -633,6 +734,7 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
         const code = resolveLonlatCode(properties, lonlat);
         const point = code ? lonlat[code] : null;
         if (!name || !point) return;
+        if (!isPointInSelectedRegion(point[0], point[1])) return;
 
         nameOverlays.push(
           createTextOverlay(
@@ -676,6 +778,7 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
         const center = getFeatureCenter(feature);
         if (!name || !center) return;
         const [lat, lng] = center;
+        if (!isPointInSelectedRegion(lng, lat)) return;
 
         nameOverlays.push(
           createTextOverlay(
@@ -843,6 +946,9 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     groups,
     visibleGroups,
     selectedRegion,
+    selectedRegionKey,
+    selectedRegionBoundary,
+    isRegionDrilldown,
     stationTimeline,
     stationData,
     stationLoading,
@@ -866,12 +972,14 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     isGroupCollapsible,
     toggleItem,
     selectRegionItem,
+    resetRegion,
     isGroupDisabled,
     isGroupEnabled,
     shouldShowItems,
     loadStationTimeline,
     loadStationDataByCurrentTime,
     loadCountyResources,
+    loadCountyAreaResources,
     loadTownResources,
     refreshStationLayerVisible,
     refreshCountyLayerVisible,
@@ -1087,3 +1195,43 @@ function collectLngLat(coords: any, points: [number, number][]) {
   }
   coords.forEach((item) => collectLngLat(item, points));
 }
+
+/** 判断经纬度点是否落在 GeoJSON 面内（用于下钻后过滤文字标注） */
+function geometryContainsPoint(geometry: any, lng: number, lat: number) {
+  if (!geometry) return false;
+  if (geometry.type === "Polygon") {
+    return polygonContainsPoint(geometry.coordinates, lng, lat);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return (geometry.coordinates || []).some((rings: any) =>
+      polygonContainsPoint(rings, lng, lat),
+    );
+  }
+  return false;
+}
+
+function polygonContainsPoint(rings: any, lng: number, lat: number) {
+  if (!Array.isArray(rings) || !rings.length) return false;
+  if (!ringContainsPoint(rings[0], lng, lat)) return false;
+  return !rings.slice(1).some((hole: any) => ringContainsPoint(hole, lng, lat));
+}
+
+function ringContainsPoint(ring: any, lng: number, lat: number) {
+  if (!Array.isArray(ring) || ring.length < 3) return false;
+
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = Number(ring[i]?.[0]);
+    const yi = Number(ring[i]?.[1]);
+    const xj = Number(ring[j]?.[0]);
+    const yj = Number(ring[j]?.[1]);
+    if (![xi, yi, xj, yj].every((value) => Number.isFinite(value))) continue;
+
+    const crosses = yi > lat !== yj > lat;
+    if (crosses && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
