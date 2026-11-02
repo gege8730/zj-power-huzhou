@@ -18,6 +18,18 @@
       :disabled="!canGoRight"
       @click="scrollRight"
     ></button>
+    <button
+      class="axis-control play-control"
+      :class="{ disabled: !canPlay, playing: isPlaying }"
+      type="button"
+      :aria-label="isPlaying ? '暂停播放' : '播放'"
+      :title="canPlay ? (isPlaying ? '暂停播放' : '从前一天12时开始逐小时播放') : '当前要素暂不支持逐小时播放'"
+      :disabled="!canPlay"
+      @click="togglePlay"
+    >
+      <svg v-if="!isPlaying" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>
+      <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg>
+    </button>
     <el-scrollbar ref="scrollbarRef" class="axis-line-container" :always="true">
       <div class="axis-line">
         <el-popover placement="top" trigger="hover" popper-class="time-popover" v-for="(item,index) in timelinelist" :key="index">
@@ -25,7 +37,7 @@
             <button
               class="axis-item"
               :class="[
-                { active: index == store.timeline.currentIndex, convection: store.isConvectionMode },
+                { active: index == store.timeline.currentIndex, convection: store.isConvectionRiskView },
                 item.riskClass,
               ]"
               :style="{ '--axis-delay': `${(index % 7) * 0.13}s` }"
@@ -65,7 +77,7 @@ const timelinelist = computed(() => props.timeline.map(item => {
   let time, day
 
   // 强对流专题：实况按 10 分钟短临出帧，预报按逐小时出帧
-  if (store.isConvectionMode) {
+  if (store.isConvectionRiskView) {
     time = store.productMode === 'forecast' ? `${date.hour()}时` : date.format('HH:mm')
     day = date.format('M月D日HH:mm')
     return { time, day, riskClass: getConvectionRiskClass(item.filePath) }
@@ -85,7 +97,7 @@ const timelinelist = computed(() => props.timeline.map(item => {
 }))
 
 const getConvectionRiskClass = (filePath: string) => {
-  if (!store.isConvectionMode) return ''
+  if (!store.isConvectionRiskView) return ''
   const frame = store.mapRenderData.convectionData?.frames?.[filePath]
   const maxRisk = frame ? Math.max(...Object.values(frame).map((risk) => Number(risk) || 0)) : 0
   if (maxRisk >= 2) return 'risk-high'
@@ -125,7 +137,7 @@ const scrollToEnd = () => {
 }
 
 const scrollToDefault = () => {
-  if (store.productMode === 'forecast') {
+  if (store.productMode === 'forecast' || store.isConvectionForecastOption) {
     scrollToStart()
     return
   }
@@ -152,9 +164,67 @@ const scrollTimelineItemIntoView = (index: number) => {
   })
 }
 
-const selectTimelineIndex = (index: number) => {
-  store.setTimelineIndex(index)
+const selectTimelineIndex = (index: number, fromPlayer = false) => {
+  // 手动操作时间轴即中断自动播放
+  if (!fromPlayer) stopPlay()
+  const request = store.setTimelineIndex(index)
   scrollTimelineItemIntoView(index)
+  return request
+}
+
+/** 逐小时播放：从前一天 12:00 开始，播到最后一个时次后回到起点循环 */
+const PLAY_FRAME_DELAY = 1000
+const isPlaying = ref(false)
+let playToken = 0
+let playTimer: ReturnType<typeof window.setTimeout> | null = null
+
+const canPlay = computed(() => {
+  const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
+  return !store.isConvectionRiskView && duration === 'H' && timelinelist.value.length > 1
+})
+
+const getPlayStartIndex = () => {
+  const labels = store.timeline.labels
+  if (store.isForecastMode || !labels.length) return 0
+
+  const latest = dayjs(labels[labels.length - 1].dateTime)
+  const target = latest.subtract(1, 'day').hour(12).minute(0).second(0)
+  const index = labels.findIndex((item) => dayjs(item.dateTime).isSame(target, 'hour'))
+  return index >= 0 ? index : 0
+}
+
+function stopPlay() {
+  playToken++
+  isPlaying.value = false
+  if (playTimer) {
+    window.clearTimeout(playTimer)
+    playTimer = null
+  }
+}
+
+const startPlay = () => {
+  if (!canPlay.value) return
+  const token = ++playToken
+  const startIndex = getPlayStartIndex()
+  const lastIndex = store.timeline.labels.length - 1
+  isPlaying.value = true
+
+  const showFrame = async (index: number) => {
+    // 等当前时次的数据加载并渲染完，再开始计时切下一帧，避免加载慢时帧被跳过
+    await selectTimelineIndex(index, true)
+    if (token !== playToken) return
+    playTimer = window.setTimeout(() => {
+      if (token !== playToken) return
+      showFrame(index >= lastIndex ? startIndex : index + 1)
+    }, PLAY_FRAME_DELAY)
+  }
+
+  showFrame(startIndex)
+}
+
+const togglePlay = () => {
+  if (isPlaying.value) stopPlay()
+  else startPlay()
 }
 
 /**
@@ -195,7 +265,7 @@ onMounted(() => {
   const wrap = getScrollbarWrap()
   if (wrap && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(() => {
-      if (store.productMode !== 'forecast') {
+      if (store.productMode !== 'forecast' && !store.isConvectionForecastOption) {
         scrollToEnd()
       }
     })
@@ -204,13 +274,16 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopPlay()
   resizeObserver?.disconnect()
   if (defaultScrollTimer) {
     window.clearTimeout(defaultScrollTimer)
   }
 })
 
-watch(() => [props.timeline, store.productMode, store.isConvectionMode], scheduleDefaultScroll, { deep: true })
+watch(() => [props.timeline, store.productMode, store.isConvectionRiskView, store.isConvectionForecastOption], scheduleDefaultScroll, { deep: true })
+// 切换要素/产品/时间轴数据后，旧的播放序列已失效
+watch(() => [props.timeline, store.currentSelection, store.productMode, store.scene], stopPlay)
 watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
 </script>
 
@@ -266,8 +339,27 @@ watch(() => layoutStore.isMapFullscreen, scheduleDefaultScroll)
   outline: 1px solid rgba(255, 227, 62, 0.85);
   outline-offset: 0.15rem;
 }
+
+.play-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.3rem;
+  background-image: linear-gradient(180deg, #2b8cf0 0%, #1459c4 100%);
+  box-shadow: inset 0 0 0 1px rgba(140, 205, 255, 0.55);
+}
+
+.play-control svg {
+  width: 62%;
+  height: 62%;
+  fill: #f2fbff;
+}
+
+.play-control.playing {
+  box-shadow: inset 0 0 0 1px rgba(255, 227, 62, 0.85), 0 0 0.45rem rgba(255, 227, 62, 0.4);
+}
 .axis-line-container{
-  width: calc(100% - clamp(1.5rem, 1.45vw, 1.8rem) - clamp(1.5rem, 1.45vw, 1.8rem) - 1rem);
+  width: calc(100% - 3 * clamp(1.5rem, 1.45vw, 1.8rem) - 1.5rem);
   
 }
 .axis-line {

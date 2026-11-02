@@ -17,8 +17,8 @@
     </div>
 
     <div class="map-bottom-tabs">
-      <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">{{ liveTabLabel }}</button>
-      <button class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">{{ forecastTabLabel }}</button>
+      <button class="mini-tab" :class="{ active: store.isConvectionMode || store.productMode === 'live' }" type="button" @click="!store.isConvectionMode && store.setProductMode('live')">{{ liveTabLabel }}</button>
+      <button v-if="!store.isConvectionMode" class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">预报</button>
       <!-- <div class="datepicker-wrapper">
         <el-date-picker
           v-model="baseTimeModel"
@@ -49,9 +49,8 @@ import { useMapStore } from '@/store'
 
 const store = useMapStore()
 
-/** 强对流专题底部只区分短临时段，文案与设计稿保持一致 */
-const liveTabLabel = computed(() => (store.isConvectionMode ? '0-2h（实况）' : '☀ 实况'))
-const forecastTabLabel = computed(() => (store.isConvectionMode ? '0-24h（预报）' : '☁ 预报'))
+/** 强对流专题只有一个底部标签：实况类选项显示“实况”，要素/概率/确定性预报选项显示“预报” */
+const liveTabLabel = computed(() => (store.isConvectionForecastOption ? '预报' : '实况'))
 
 /** 桥接 Date <-> dayjs，v-model 返回的是 Date 对象 */
 const baseTimeModel = computed<Date>({

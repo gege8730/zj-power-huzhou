@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import dayjs from 'dayjs'
 import type { Dayjs } from 'dayjs'
 import { getDataFile, seBiaoByCategory } from '@/api/weather'
+import { downloadScmocGridFile, getScmocGridData, getScmocGridFileList } from '@/api/convection'
+import type { ScmocGridExtent, ScmocGridFile } from '@/api/convection'
 
 /** 要素类型 */
 export type FactorType = 'temperature' | 'precipitation' | 'wind' | 'visibility' | 'humidity' | 'cloud' | 'radiation' | 'convection'
@@ -29,6 +31,8 @@ export interface FactorConfig {
   eleDuration: string[]
   /** 数据文件路径模板，如 '/sample/{factor}_{time}.json' */
   dataUrlTemplate?: string
+  /** 强对流 SCMOC 产品编码；有值时使用预生成 PNG 产品图 */
+  scmocProdCode?: string[]
 }
 
 /** 色标项 */
@@ -64,6 +68,8 @@ export interface TimelineData {
 }
 
 export type ConvectionRiskLevel = 0 | 1 | 2
+export type ConvectionRiskType = 'composite' | 'rain' | 'wind'
+const CONVECTION_RISK_TYPES: ConvectionRiskType[] = ['composite', 'rain', 'wind']
 
 export interface ShortTermWarningHour {
   time?: string
@@ -92,11 +98,20 @@ export interface ConvectionRenderData {
   frames: Record<string, Record<string, ConvectionRiskLevel>>
 }
 
+export interface ConvectionProductImage {
+  blob: Blob
+  filePath: string
+  ptime: string
+  validTime: number
+}
+
 /** 地图渲染数据 */
 export interface MapRenderData {
   /** 网格数据 */
   gridData: any | null
   convectionData: ConvectionRenderData | null
+  /** 强对流 SCMOC 预生成产品图 */
+  convectionProductImage: ConvectionProductImage | null
   /** 边界数据 */
   boundaryData: any | null
   /** 颜色配置 */
@@ -142,17 +157,52 @@ const FORECAST_FACTORS: FactorConfig[] = [
 
 /**
  * 强对流专题要素清单。
- * 目前只有「风险 / 综合」接入短临告警接口，其余产品的 ele 留空，
+ * 「风险」的综合/暴雨/大风共用短临告警接口，暴雨、大风暂为 mock，其余产品的 ele 留空，
  * 由 DashboardView 统一提示“该产品开发中”。
  */
 const CONVECTION_FACTORS: FactorConfig[] = [
-  { type: 'convection', name: '风险', options: ['综合', '暴雨', '大风'], ele: ['STRONGCONV_COMPOSITE', '', ''], stationEle: ['', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN'] },
-  { type: 'convection', name: '暴雨', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'] },
-  { type: 'convection', name: '大风', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['', '', '', ''], stationEle: ['', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'] },
+  { type: 'convection', name: '风险', options: ['综合', '暴雨', '大风'], ele: ['STRONGCONV_COMPOSITE', 'STRONGCONV_RAIN', 'STRONGCONV_WIND'], stationEle: ['', '', ''], eleDuration: ['10MIN', '10MIN', '10MIN'] },
+  { type: 'precipitation', name: '暴雨', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['R', 'Pr01', '', ''], stationEle: ['R1', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'], scmocProdCode: ['', '', 'SCMOC-RAT-PRO', 'SCMOC-RAT-VAL'] },
+  { type: 'wind', name: '大风', options: ['实况', '要素预报', '概率预报', '确定性预报'], ele: ['EXMAXWINDV', 'WindEx', '', ''], stationEle: ['WSIM1', '', '', ''], eleDuration: ['H', 'H', 'H', 'H'], scmocProdCode: ['', '', 'SCMOC-SMG-PRO', 'SCMOC-SMG-VAL'] },
   { type: 'convection', name: '雷达', options: ['实况', '雷达外推'], ele: ['', ''], stationEle: ['', ''], eleDuration: ['H', 'H'] },
-  { type: 'convection', name: '雷电', options: ['实况', '概率预报', '确定性预报'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['H', 'H', 'H'] },
-  { type: 'convection', name: '冰雹', options: ['概率预报', '确定性预报'], ele: ['', ''], stationEle: ['', ''], eleDuration: ['H', 'H'] },
+  { type: 'convection', name: '雷电', options: ['实况', '概率预报', '确定性预报'], ele: ['', '', ''], stationEle: ['', '', ''], eleDuration: ['10MIN', 'H', 'H'], scmocProdCode: ['', 'SCMOC-SSM-PRO', 'SCMOC-SSM-VAL'] },
+  { type: 'convection', name: '冰雹', options: ['概率预报', '确定性预报'], ele: ['', ''], stationEle: ['', ''], eleDuration: ['H', 'H'], scmocProdCode: ['SCMOC-HAIL-PRO', 'SCMOC-HAIL-VAL'] },
 ]
+
+const SCMOC_PROBABILITY_COLOR_CONFIG: MapColorConfig = {
+  unit: '%',
+  fieldName: 'value',
+  stops: [
+    { value: 0, color: '#58780c' },
+    { value: 10, color: '#a4bf2e' },
+    { value: 30, color: '#ffe64d' },
+    { value: 50, color: '#ff9d27' },
+    { value: 70, color: '#ef4d34' },
+    { value: 90, color: '#b41b66' },
+  ],
+}
+
+const SCMOC_LEVEL_COLOR_CONFIG: MapColorConfig = {
+  unit: '等级',
+  fieldName: 'value',
+  stops: [
+    { value: -1, color: '#58780c' },
+    { value: 0, color: '#58780c' },
+    { value: 1, color: '#a4bf2e' },
+    { value: 2, color: '#ffe64d' },
+    { value: 3, color: '#ff9d27' },
+    { value: 4, color: '#ef4d34' },
+  ],
+}
+
+const SCMOC_DETERMINISTIC_COLOR_CONFIG: MapColorConfig = {
+  unit: '',
+  fieldName: 'value',
+  stops: [
+    { value: -1, color: '#e32400' },
+    { value: 0, color: '#f5f5f5' },
+  ],
+}
 
 export const useMapStore = defineStore('map', () => {
   // ==================== 要素状态 ====================
@@ -173,8 +223,57 @@ export const useMapStore = defineStore('map', () => {
   /** 当前选中索引（如 '0-0' 表示第1个要素的第1个选项） */
   const currentSelection = ref('0-0')
 
-  /** 是否预报模式 */
-  const isForecastMode = computed(() => productMode.value === 'forecast')
+  /** 当前强对流 SCMOC 产品编码 */
+  const currentScmocProdCode = computed(
+    () => currentFactor.value.scmocProdCode?.[currentOptionIndex.value] || '',
+  )
+
+  /** 强对流专题使用 SCMOC 预生成 PNG 产品图的要素 */
+  const isConvectionImageProduct = computed(
+    () => scene.value === 'convection' && Boolean(currentScmocProdCode.value),
+  )
+
+  /** SCMOC 确定性预报使用“出现 / 不出现”二值产品编码 */
+  const isConvectionDeterministicProduct = computed(
+    () => isConvectionImageProduct.value && currentScmocProdCode.value.endsWith('-VAL'),
+  )
+
+  /** 强对流专题里复用常规网格产品的要素 */
+  const isConvectionGridFactor = computed(
+    () => scene.value === 'convection'
+      && !isConvectionImageProduct.value
+      && currentFactor.value.type !== 'convection',
+  )
+
+  /** 强对流风险视图：使用短临告警帧而不是网格数据 */
+  const isConvectionRiskView = computed(
+    () => scene.value === 'convection'
+      && !isConvectionImageProduct.value
+      && !isConvectionLightningLive.value
+      && currentFactor.value.type === 'convection',
+  )
+
+  /** 雷电实况：直接叠加最近 10 分钟地闪点（/api/thunderList），不走网格/产品图 */
+  const isConvectionLightningLive = computed(
+    () => scene.value === 'convection'
+      && currentFactor.value.name === '雷电'
+      && currentOptionIndex.value === 0,
+  )
+
+  /** 强对流暴雨/大风「要素预报」：复用首页预报网格（Pr01 / WindEx），未来 24 小时逐小时 */
+  const isConvectionGridForecast = computed(
+    () => isConvectionGridFactor.value && currentOptionIndex.value === 1,
+  )
+
+  /** 强对流里的要素/概率/确定性预报选项：底部标签显示“预报”，时间轴从第一档开始 */
+  const isConvectionForecastOption = computed(
+    () => isConvectionImageProduct.value || isConvectionGridForecast.value,
+  )
+
+  /** 是否预报模式（强对流专题里的网格要素按实况处理，仅「要素预报」选项例外） */
+  const isForecastMode = computed(
+    () => productMode.value === 'forecast' && (!isConvectionGridFactor.value || isConvectionGridForecast.value),
+  )
 
   /** 当前选中要素配置 */
   const currentFactor = computed(() => {
@@ -252,11 +351,16 @@ export const useMapStore = defineStore('map', () => {
   // ==================== 地图数据状态 ====================
   /** 强对流原始短临告警数据，用于在实况/预报之间重建时间轴 */
   const convectionSource = ref<ShortTermWarningData | null>(null)
+  const convectionProductFiles = ref<Record<string, ScmocGridFile>>({})
+  const convectionProductImageCache = ref<Record<string, Blob>>({})
+  const convectionProductExtent = ref<ScmocGridExtent | null>(null)
+  const convectionProductGridCache = ref<Record<string, any[]>>({})
 
   /** 地图渲染数据 */
   const mapRenderData = ref<MapRenderData>({
     gridData: null,
     convectionData: null,
+    convectionProductImage: null,
     boundaryData: null,
     colorConfig: null,
     loading: false,
@@ -265,16 +369,36 @@ export const useMapStore = defineStore('map', () => {
   })
   // 地图标题
   const maptitle = computed (() => {
-    if (isConvectionMode.value) {
+    if (isConvectionRiskView.value) {
       const time = dayjs(timeline.value.currentLabel.dateTime || mapRenderData.value.convectionData?.observeTime)
-      if (isForecastMode.value) {
-        return time.isValid() ? `${time.format('YYYY年MM月DD日HH时')} 强对流风险预报图` : '强对流风险预报图'
+      if (currentFactor.value.name === '雷达') {
+        return time.isValid() ? `${time.format('YYYY年MM月DD日HH时mm分')} 雷达实况分布图` : '雷达实况分布图'
       }
-      return time.isValid() ? `${time.format('YYYY年MM月DD日HH时mm分')} 强对流风险图` : '强对流风险图'
+      const riskName = currentOption.value === '综合' ? '强对流' : `强对流${currentOption.value}`
+      if (isForecastMode.value) {
+        return time.isValid() ? `${time.format('YYYY年MM月DD日HH时')} ${riskName}风险预报图` : `${riskName}风险预报图`
+      }
+      return time.isValid() ? `${time.format('YYYY年MM月DD日HH时mm分')} ${riskName}风险图` : `${riskName}风险图`
     }
+    if (isConvectionImageProduct.value) {
+      const time = dayjs(timeline.value.currentLabel.dateTime)
+      const productName = `${currentFactor.value.name}${currentOption.value}`
+      return time.isValid()
+        ? `${time.format('YYYY年MM月DD日HH时')} ${productName}`
+        : productName
+    }
+    if (isConvectionLightningLive.value) return `${dayjs().minute(Math.floor(dayjs().minute() / 10) * 10).format('YYYY年MM月DD日HH时mm分')} 雷电实况分布图`
     if(timelineParams.value.ele == '') return '要素数据开发中...'
     const time = dayjs(timeline.value.currentLabel.dateTime)
     if (!time.isValid()) return ''
+
+    if (isConvectionGridFactor.value) {
+      if (isConvectionGridForecast.value) {
+        return `${time.format('YYYY年MM月DD日HH时')} ${currentFactor.value.name}要素预报分布图`
+      }
+      const gridTitle = currentFactor.value.type === 'wind' ? '大风实况分布图' : '暴雨实况分布图'
+      return `${time.format('YYYY年MM月DD日HH时')} ${gridTitle}`
+    }
 
     if (isForecastMode.value) {
       return getForecastMapTitle(time)
@@ -346,6 +470,11 @@ export const useMapStore = defineStore('map', () => {
       convectionSource.value = null
       mapRenderData.value.convectionData = null
     }
+    convectionProductFiles.value = {}
+    convectionProductImageCache.value = {}
+    convectionProductGridCache.value = {}
+    convectionProductExtent.value = null
+    mapRenderData.value.convectionProductImage = null
     clearCache()
   }
 
@@ -359,9 +488,14 @@ export const useMapStore = defineStore('map', () => {
     mapDataRequestSerial++
     colorConfigRequestSerial++
     currentFactorType.value = factor.type
+    if (isConvectionMode.value) {
+      // 要素预报复用预报网格，其余选项为实况；产品模式随选项切换
+      productMode.value = factor.type !== 'convection' && optionIndex === 1 ? 'forecast' : 'live'
+    }
     currentSelection.value = nextSelection
     mapRenderData.value.colorConfig = null
     mapRenderData.value.gridData = null
+    mapRenderData.value.convectionProductImage = null
     mapRenderData.value.loading = false
     if (isConvectionMode.value) {
       mapRenderData.value.convectionData = null
@@ -384,6 +518,7 @@ export const useMapStore = defineStore('map', () => {
     setTimelineLabels([])
     mapRenderData.value.gridData = null
     mapRenderData.value.convectionData = null
+    mapRenderData.value.convectionProductImage = null
     mapRenderData.value.colorConfig = null
     mapRenderData.value.loading = false
     mapRenderData.value.error = null
@@ -395,14 +530,15 @@ export const useMapStore = defineStore('map', () => {
   /**
    * 设置当前时间索引
    */
-  function setTimelineIndex(index: number) {
+  function setTimelineIndex(index: number): Promise<void> {
     if (index >= 0 && index < timeline.value.labels.length) {
       timeline.value.currentIndex = index
       timeline.value.currentLabel = timeline.value.labels[index]
-      if (isConvectionMode.value) return
-      // 刷新地图数据
-      refreshMapData()
+      if (isConvectionRiskView.value) return Promise.resolve()
+      // 刷新地图数据；返回 Promise 便于时间轴播放等到该时次加载完再切下一帧
+      return refreshMapData()
     }
+    return Promise.resolve()
   }
 
   /**
@@ -417,7 +553,7 @@ export const useMapStore = defineStore('map', () => {
       return
     }
 
-    const defaultIndex = isForecastMode.value ? 0 : labels.length - 1
+    const defaultIndex = isForecastMode.value || isConvectionForecastOption.value ? 0 : labels.length - 1
     timeline.value.currentIndex = defaultIndex
     timeline.value.currentLabel = labels[defaultIndex]
   }
@@ -431,7 +567,112 @@ export const useMapStore = defineStore('map', () => {
     const requestSelection = currentSelection.value
     const factor = currentFactor.value
     const currentTimeFile = timeline.value.currentLabel.filePath
-    if (isConvectionMode.value) {
+    if (isConvectionImageProduct.value) {
+      const file = convectionProductFiles.value[currentTimeFile]
+      const extent = convectionProductExtent.value
+      if (!file || !extent) {
+        mapRenderData.value.gridData = null
+        mapRenderData.value.convectionProductImage = null
+        mapRenderData.value.error = file ? null : '当前强对流产品时次不存在'
+        return
+      }
+
+      const gridCacheKey = [
+        file.prodCode,
+        file.ptime,
+        extent.startLon,
+        extent.startLat,
+        extent.endLon,
+        extent.endLat,
+      ].join('_')
+      mapRenderData.value.loading = true
+      mapRenderData.value.error = null
+      mapRenderData.value.gridData = null
+      mapRenderData.value.convectionData = null
+
+      try {
+        const gridRequestParams = {
+          prodCode: file.prodCode,
+          ptime: file.ptime,
+          ...extent,
+          dataFormat: 'json',
+        }
+        if (file.prodCode.endsWith('-PRO') || file.prodCode.endsWith('-VAL')) {
+          console.log(
+            '[SCMOC] 格点接口请求参数 getNafpNwfdScmocOfGridDataByProdCodeAndTime:',
+            gridRequestParams,
+          )
+        }
+        const grids = convectionProductGridCache.value[gridCacheKey]
+          || (await getScmocGridData(gridRequestParams)).DS
+        if (
+          requestSerial !== mapDataRequestSerial
+          || requestProductMode !== productMode.value
+          || requestSelection !== currentSelection.value
+          || currentTimeFile !== timeline.value.currentLabel.filePath
+        ) {
+          return
+        }
+        convectionProductGridCache.value[gridCacheKey] = grids
+        const rawGrid = grids[timeline.value.currentIndex]
+        if (!rawGrid) {
+          throw new Error('当前产品时次缺少格点数据')
+        }
+        if (file.prodCode.endsWith('-PRO') || file.prodCode.endsWith('-VAL')) {
+          console.groupCollapsed(
+            `[SCMOC] ${currentFactor.value.name}${currentOption.value} `
+              + `${timeline.value.currentLabel.dateTime}`,
+          )
+          console.log('请求参数:', {
+            prodCode: file.prodCode,
+            ptime: file.ptime,
+            validTime: file.validTime,
+            ...extent,
+            dataFormat: 'json',
+          })
+          console.log('接口返回的全部时效格点:', grids)
+          console.log('当前时效格点:', rawGrid)
+          console.groupEnd()
+        }
+        mapRenderData.value.gridData = normalizeScmocGridData(rawGrid)
+        mapRenderData.value.colorConfig = getScmocColorConfig(file.prodCode)
+        mapRenderData.value.convectionProductImage = null
+        mapRenderData.value.lastUpdateTime = new Date().toISOString()
+      } catch (error: any) {
+        if (requestSerial !== mapDataRequestSerial) return
+        console.error('Failed to load convection product grid:', error)
+        try {
+          const imageCacheKey = `${file.prodCode}_${file.ptime}_${file.filePath}`
+          const blob = convectionProductImageCache.value[imageCacheKey]
+            || await downloadScmocGridFile({ ptime: file.ptime, filePath: file.filePath })
+          if (requestSerial !== mapDataRequestSerial) return
+          convectionProductImageCache.value[imageCacheKey] = blob
+          mapRenderData.value.convectionProductImage = {
+            blob,
+            filePath: file.filePath,
+            ptime: file.ptime,
+            validTime: file.validTime,
+          }
+          mapRenderData.value.error = null
+        } catch (imageError: any) {
+          if (requestSerial !== mapDataRequestSerial) return
+          mapRenderData.value.convectionProductImage = null
+          mapRenderData.value.error = imageError.message || '强对流产品数据加载失败'
+          console.error('Failed to load convection product image fallback:', imageError)
+        }
+      } finally {
+        if (requestSerial === mapDataRequestSerial) {
+          mapRenderData.value.loading = false
+        }
+      }
+      return
+    }
+    if (isConvectionLightningLive.value) {
+      mapRenderData.value.gridData = null
+      mapRenderData.value.error = null
+      return
+    }
+    if (isConvectionRiskView.value) {
       mapRenderData.value.gridData = null
       mapRenderData.value.error = null
       return
@@ -502,6 +743,17 @@ export const useMapStore = defineStore('map', () => {
       region: '330500'
     }
     const res = await getDataFile(params)
+    // 调试：打印 /api/getDataFile 的完整返回，查看除网格值外还有哪些字段
+    console.log(`[getDataFile] ele=${currentGridEle.value} filePath=${filePath}`, res)
+    console.log('[getDataFile] 返回顶层字段:', Object.keys(res || {}))
+    if (res?.DS && typeof res.DS === 'object') {
+      console.log('[getDataFile] DS 字段:', Object.fromEntries(
+        Object.entries(res.DS).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? `Array(${value.length})，前5项: ${JSON.stringify(value.slice(0, 5))}` : value,
+        ]),
+      ))
+    }
     return res.DS
   }
 
@@ -621,16 +873,101 @@ export const useMapStore = defineStore('map', () => {
 
   /** 按当前产品模式（0-2h 实况 / 0-24h 预报）重建强对流帧与时间轴 */
   function rebuildConvectionData() {
-    const renderData = buildConvectionRenderData(convectionSource.value, productMode.value)
+    const riskType = CONVECTION_RISK_TYPES[currentOptionIndex.value] ?? 'composite'
+    const renderData = buildConvectionRenderData(convectionSource.value, productMode.value, riskType)
+    if (!isConvectionRiskView.value) return renderData
     mapRenderData.value.convectionData = renderData
-    if (!isConvectionMode.value) return renderData
-
     mapRenderData.value.gridData = null
     mapRenderData.value.colorConfig = null
     mapRenderData.value.error = renderData ? null : '强对流风险暂无数据'
     setTimelineLabels(renderData?.timeline ?? [])
     mapRenderData.value.lastUpdateTime = new Date().toISOString()
     return renderData
+  }
+
+  /** 获取当前 SCMOC 产品的最新起报时次及其全部有效时效 */
+  async function loadConvectionProductTimeline() {
+    const prodCode = currentScmocProdCode.value
+    const requestSelection = currentSelection.value
+    if (!prodCode) return
+
+    mapRenderData.value.loading = true
+    mapRenderData.value.error = null
+    mapRenderData.value.gridData = null
+    mapRenderData.value.convectionData = null
+    mapRenderData.value.convectionProductImage = null
+
+    try {
+      const fileListRequestParams = {
+        prodCode,
+        limitCnt: 50,
+        dataType: 'png',
+        dataFormat: 'json',
+      } as const
+      if (prodCode.endsWith('-PRO') || prodCode.endsWith('-VAL')) {
+        console.log(
+          '[SCMOC] 文件列表接口请求参数 getNafpNwfdScmocOfGridEleTimeListByTimeRange:',
+          fileListRequestParams,
+        )
+      }
+      const response = await getScmocGridFileList(fileListRequestParams)
+      if (
+        requestSelection !== currentSelection.value
+        || prodCode !== currentScmocProdCode.value
+      ) {
+        return
+      }
+
+      const files = Array.isArray(response.DS) ? response.DS : []
+      const ptimeValues = files
+        .map((item) => item.ptime)
+        .filter((ptime) => /^\d{14}$/.test(ptime))
+        .sort()
+      const latestPtime = ptimeValues[ptimeValues.length - 1]
+      const latestFiles = files
+        .filter((item) => item.ptime === latestPtime && Number(item.validTime) >= 1 && Number(item.validTime) <= 24)
+        .sort((a, b) => Number(a.validTime) - Number(b.validTime))
+
+      convectionProductFiles.value = Object.fromEntries(
+        latestFiles.map((item) => [item.filePath, item]),
+      )
+      setTimelineLabels(latestFiles.map((item) => ({
+        dateTime: formatScmocValidTime(item.ptime, item.validTime),
+        filePath: item.filePath,
+      })))
+
+      if (!latestFiles.length) {
+        mapRenderData.value.error = '当前强对流产品暂无可用时次'
+        return
+      }
+
+      await refreshMapData()
+    } catch (error: any) {
+      if (requestSelection !== currentSelection.value) return
+      convectionProductFiles.value = {}
+      setTimelineLabels([])
+      mapRenderData.value.convectionProductImage = null
+      mapRenderData.value.error = error.message || '强对流产品时次加载失败'
+      console.error('Failed to load convection product timeline:', error)
+    } finally {
+      mapRenderData.value.loading = false
+    }
+  }
+
+  /** 地区选择变化时，使用该地区的外接范围重新请求 SCMOC 原始格点 */
+  function setConvectionProductExtent(extent: ScmocGridExtent) {
+    const previous = convectionProductExtent.value
+    const changed = !previous
+      || previous.startLon !== extent.startLon
+      || previous.startLat !== extent.startLat
+      || previous.endLon !== extent.endLon
+      || previous.endLat !== extent.endLat
+    if (!changed) return
+
+    convectionProductExtent.value = extent
+    if (isConvectionImageProduct.value && timeline.value.currentLabel.filePath) {
+      void refreshMapData()
+    }
   }
 
   /**
@@ -641,7 +978,7 @@ export const useMapStore = defineStore('map', () => {
     const requestSerial = ++colorConfigRequestSerial
     const requestProductMode = productMode.value
     const requestSelection = currentSelection.value
-    if (isConvectionMode.value) {
+    if (isConvectionRiskView.value || isConvectionImageProduct.value) {
       setColorConfig(null)
       return null
     }
@@ -722,7 +1059,13 @@ export const useMapStore = defineStore('map', () => {
     factors,
     productMode,
     isForecastMode,
+    isConvectionGridForecast,
+    isConvectionForecastOption,
     isConvectionMode,
+    isConvectionRiskView,
+    isConvectionLightningLive,
+    isConvectionImageProduct,
+    isConvectionDeterministicProduct,
     currentFactorType,
     currentSelection,
     currentFactor,
@@ -751,6 +1094,8 @@ export const useMapStore = defineStore('map', () => {
     setBoundaryData,
     setColorConfig,
     setConvectionWarningData,
+    loadConvectionProductTimeline,
+    setConvectionProductExtent,
     loadCurrentColorConfig,
     clearCache,
     clearError,
@@ -758,6 +1103,54 @@ export const useMapStore = defineStore('map', () => {
     setFactorOption,
   }
 })
+
+function formatScmocValidTime(ptime: string, validTime: number) {
+  if (!/^\d{14}$/.test(ptime)) return ''
+  const start = dayjs(
+    `${ptime.slice(0, 4)}-${ptime.slice(4, 6)}-${ptime.slice(6, 8)} `
+      + `${ptime.slice(8, 10)}:${ptime.slice(10, 12)}:${ptime.slice(12, 14)}`,
+  )
+  return start.add(Number(validTime) || 0, 'hour').format('YYYY-MM-DD HH:mm:ss')
+}
+
+function normalizeScmocGridData(grid: {
+  startLon: number
+  startLat: number
+  endLon: number
+  endLat: number
+  lonStep: number
+  latStep: number
+  lonLength: number
+  latLength: number
+  values: number[]
+}) {
+  return {
+    nx: grid.lonLength,
+    ny: grid.latLength,
+    startLon: grid.startLon,
+    endLon: grid.endLon,
+    startLat: grid.startLat,
+    endLat: grid.endLat,
+    lonStep: grid.lonStep,
+    latStep: grid.latStep,
+    // -1 是产品有效编码；9999 是接口返回的无有效数据标记。
+    missingValue: 9999,
+    v: grid.values,
+  }
+}
+
+function getScmocColorConfig(prodCode: string): MapColorConfig {
+  const source = prodCode.endsWith('-PRO')
+    ? SCMOC_PROBABILITY_COLOR_CONFIG
+    : prodCode.endsWith('-VAL')
+      ? SCMOC_DETERMINISTIC_COLOR_CONFIG
+      : SCMOC_LEVEL_COLOR_CONFIG
+  return {
+    ...source,
+    fieldName: prodCode,
+    stops: source.stops.map((stop) => ({ ...stop })),
+  }
+}
 
 function normalizeSebiaoList(source: unknown): SebiaoConfigItem[] {
   const list = Array.isArray(source) ? source : []
@@ -808,14 +1201,42 @@ function normalizeAlias(value: string) {
 function buildConvectionRenderData(
   source: ShortTermWarningData | null | undefined,
   mode: ProductMode = 'live',
+  riskType: ConvectionRiskType = 'composite',
 ): ConvectionRenderData | null {
-  const rows = Array.isArray(source?.warning) ? source.warning : []
-  if (!rows.length) return null
+  const sourceRows = Array.isArray(source?.warning) ? source.warning : []
+  if (!sourceRows.length) return null
 
+  const rows = sourceRows.map((row) => ({ ...row, hours: getRiskTypeHours(row, riskType) }))
   const endTime = parseConvectionBaseTime(source?.observeTime || source?.time)
   return mode === 'forecast'
     ? buildConvectionForecastFrames(rows, endTime)
     : buildConvectionLiveFrames(rows, endTime)
+}
+
+/**
+ * 取指定风险类型的逐时风险：优先读接口约定字段 rainHours / windHours，
+ * 接口未提供时按乡镇与时次生成稳定的 mock 数据（接口接入后可删除）。
+ */
+function getRiskTypeHours(row: ShortTermWarningTown, riskType: ConvectionRiskType): ShortTermWarningHour[] {
+  const hours = Array.isArray(row.hours) ? row.hours : []
+  if (riskType === 'composite') return hours
+
+  const typed = row[`${riskType}Hours`]
+  if (Array.isArray(typed) && typed.length) return typed
+
+  const seedKey = String(row.town ?? row.name ?? row.code ?? '')
+  return hours.map((hour, index) => {
+    const base = normalizeConvectionRisk(hour.risk)
+    const seed = hashText(`${riskType}|${seedKey}|${index}`) % 6
+    const risk = Math.min(base, seed >= 4 ? 2 : seed >= 2 ? 1 : 0)
+    return { ...hour, risk }
+  })
+}
+
+function hashText(text: string) {
+  let hash = 0
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0
+  return hash
 }
 
 /** 0-2h 实况：最近 110 分钟按 10 分钟出 12 帧，取各站当前实况风险 */

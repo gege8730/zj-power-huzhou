@@ -11,7 +11,9 @@ import { getRenderPixel } from 'ol/render.js';
 import { apply as applyTransform } from 'ol/transform.js';
 import Feature from 'ol/Feature.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
+import ImageLayer from 'ol/layer/Image.js';
 import VectorLayer from 'ol/layer/Vector.js';
+import ImageStatic from 'ol/source/ImageStatic.js';
 import VectorSource from 'ol/source/Vector.js';
 import Fill from 'ol/style/Fill.js';
 import Stroke from 'ol/style/Stroke.js';
@@ -37,6 +39,7 @@ const layoutStore = useLayoutStore()
 const mapContainer = ref<HTMLElement | null>(null);
 let zjqxMap: InstanceType<typeof ZJQXMap> | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let disposeConvectionProductLayer: (() => void) | null = null;
 
 const INITIAL_MAP_CENTER: [number, number] = [30.7541, 119.786];
 const NORMAL_MAP_ZOOM = 9.3;
@@ -60,6 +63,7 @@ const REGION_VIEW_PADDING = { top: 0.09, right: 0.08, bottom: 0.11, left: 0.08 }
 const REGION_MASK_MARGIN = 15;
 
 type ConvectionVectorLayer = VectorLayer<VectorSource<Feature>>;
+type ConvectionImageLayer = ImageLayer<ImageStatic>;
 
 const convectionTownStyleCache = new Map<number, Style>();
 
@@ -348,6 +352,8 @@ onMounted(async () => {
         let visibilityValueLayer: InstanceType<typeof ZJQXGridFieldLayer> | null = null;
         let convectionTownLayer: ConvectionVectorLayer | null = null;
         let convectionOutlineLayer: ConvectionVectorLayer | null = null;
+        let convectionProductLayer: ConvectionImageLayer | null = null;
+        let convectionProductUrl: string | null = null;
         let regionMaskLayer: ConvectionVectorLayer | null = null;
         let regionMaskAnimation = 0;
         let outlineRegionKey: string | null = null;
@@ -484,7 +490,9 @@ onMounted(async () => {
         const shouldUseVisibilityValueLayer = () => shouldScaleVisibilityForFill()
 
         const getMainGridControlOptions = () => getGridControlOptions({
-            labelsEnabled: shouldUseVisibilityValueLayer() ? false : undefined,
+            labelsEnabled: shouldUseVisibilityValueLayer() || store.isConvectionDeterministicProduct
+                ? false
+                : undefined,
         })
 
         const getVisibilityValueControlOptions = () => {
@@ -594,17 +602,131 @@ onMounted(async () => {
             });
         };
 
+        /** SCMOC PNG 覆盖当前地区的范围，区域边界负责裁掉边界框外的像素 */
+        const attachConvectionProductClip = (targetLayer: ConvectionImageLayer) => {
+            let clipped = false;
+
+            targetLayer.on('prerender', (event: any) => {
+                clipped = false;
+                const map = getOpenLayersMap();
+                const ctx = event.context as CanvasRenderingContext2D | undefined;
+                const frameState = event.frameState;
+                if (!map || !ctx || !frameState || !mapControlStore.mapClipEnabled) return;
+
+                const boundary = mapControlStore.selectedRegionBoundary || adminBoundary;
+                const polygons = collectRegionPolygons(boundary);
+                if (!polygons.length) return;
+
+                const projection = map.getView().getProjection();
+                const pixel: number[] = [0, 0];
+                ctx.save();
+                ctx.beginPath();
+                polygons.forEach((rings) => rings.forEach((ring) => {
+                    ring.forEach((point, index) => {
+                        const coordinate = transform(point, 'EPSG:4326', projection);
+                        pixel[0] = coordinate[0];
+                        pixel[1] = coordinate[1];
+                        applyTransform(frameState.coordinateToPixelTransform, pixel);
+                        const [x, y] = getRenderPixel(event, pixel);
+                        if (index === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.closePath();
+                }));
+                ctx.clip();
+                clipped = true;
+            });
+
+            targetLayer.on('postrender', (event: any) => {
+                if (!clipped) return;
+                (event.context as CanvasRenderingContext2D).restore();
+                clipped = false;
+            });
+        };
+
+        const removeConvectionProductLayer = () => {
+            const map = getOpenLayersMap();
+            if (convectionProductLayer && map?.getLayers().getArray().includes(convectionProductLayer)) {
+                map.removeLayer(convectionProductLayer);
+            }
+            convectionProductLayer = null;
+            if (convectionProductUrl) {
+                URL.revokeObjectURL(convectionProductUrl);
+                convectionProductUrl = null;
+            }
+        };
+        disposeConvectionProductLayer = removeConvectionProductLayer;
+
+        const syncConvectionProductExtent = () => {
+            const boundary = mapControlStore.selectedRegionBoundary || adminBoundary;
+            const polygons = collectRegionPolygons(boundary);
+            const [startLon, startLat, endLon, endLat] = getRegionPolygonsLonLatExtent(polygons);
+            if (
+                Number.isFinite(startLon)
+                && Number.isFinite(startLat)
+                && Number.isFinite(endLon)
+                && Number.isFinite(endLat)
+            ) {
+                store.setConvectionProductExtent({ startLon, startLat, endLon, endLat });
+            }
+        };
+
+        const renderConvectionProductLayer = () => {
+            const map = getOpenLayersMap();
+            const productImage = store.mapRenderData.convectionProductImage;
+            if (!map || !store.isConvectionImageProduct || !productImage) {
+                removeConvectionProductLayer();
+                return;
+            }
+
+            const boundary = mapControlStore.selectedRegionBoundary || adminBoundary;
+            const polygons = collectRegionPolygons(boundary);
+            const [minLng, minLat, maxLng, maxLat] = getRegionPolygonsLonLatExtent(polygons);
+            if (!Number.isFinite(minLng) || !Number.isFinite(minLat)) {
+                removeConvectionProductLayer();
+                return;
+            }
+
+            if (convectionProductUrl) URL.revokeObjectURL(convectionProductUrl);
+            convectionProductUrl = URL.createObjectURL(productImage.blob);
+            const imageExtent = transformExtent(
+                [minLng, minLat, maxLng, maxLat],
+                'EPSG:4326',
+                map.getView().getProjection(),
+            );
+            const source = new ImageStatic({
+                url: convectionProductUrl,
+                imageExtent,
+            });
+
+            if (!convectionProductLayer) {
+                convectionProductLayer = new ImageLayer({
+                    source,
+                    zIndex: 325,
+                    opacity: 0.88,
+                });
+                attachConvectionProductClip(convectionProductLayer);
+                map.addLayer(convectionProductLayer);
+            } else {
+                convectionProductLayer.setSource(source);
+                if (!map.getLayers().getArray().includes(convectionProductLayer)) {
+                    map.addLayer(convectionProductLayer);
+                }
+            }
+        };
+
         const ensureConvectionLayers = () => {
             const map = getOpenLayersMap();
             const frame = store.currentConvectionFrame;
-            if (!map || !store.isConvectionMode || !store.mapRenderData.convectionData || !frame) {
+            if (!map || !store.isConvectionRiskView || !store.mapRenderData.convectionData || !frame) {
                 removeConvectionLayers();
                 // 强对流无数据时也要把常规填充层撤掉，避免残留上一场景的热力图
-                if (store.isConvectionMode) removeGridLayer();
+                if (store.isConvectionRiskView) removeGridLayer();
                 return;
             }
 
             removeGridLayer();
+            removeConvectionProductLayer();
 
             if (!convectionTownLayer) {
                 const polygonBoundary = convertBoundaryLinesToPolygons(townBoundary);
@@ -774,15 +896,18 @@ onMounted(async () => {
             if (!targetLayer) return;
 
             const gridLayer = targetLayer as any;
+            const clipGeometry = store.isConvectionImageProduct
+                ? (mapControlStore.selectedRegionBoundary || adminBoundary)
+                : adminBoundary;
             try {
                 if (mapControlStore.mapClipEnabled) {
                     if (typeof gridLayer.setClipGeometry === 'function') {
-                        gridLayer.setClipGeometry(adminBoundary);
+                        gridLayer.setClipGeometry(clipGeometry);
                     }
                     if (typeof gridLayer.setClipEnabled === 'function') {
                         gridLayer.setClipEnabled(true);
                     } else if (typeof gridLayer.update === 'function') {
-                        gridLayer.update({ clip: { geometry: adminBoundary, enabled: true } });
+                        gridLayer.update({ clip: { geometry: clipGeometry, enabled: true } });
                     }
                     return;
                 }
@@ -828,7 +953,9 @@ onMounted(async () => {
                 data: grid,
                 palette: colorResources.palette,
                 colorize: colorResources.colorize,
-                clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
+                clip: mapControlStore.mapClipEnabled
+                    ? { geometry: store.isConvectionImageProduct ? (mapControlStore.selectedRegionBoundary || adminBoundary) : adminBoundary }
+                    : undefined,
                 ...controlOptions,
                 popup: false,
                 zIndex: 302,
@@ -844,14 +971,21 @@ onMounted(async () => {
         const updateGridLayer = () => {
             // 强对流场景的图层由 ensureConvectionLayers 接管；
             // 这里直接返回，避免切换瞬间把热力填充层清空导致“地图闪一下”
-            if (store.isConvectionMode) return
+            if (store.isConvectionRiskView) return
+            if (store.isConvectionImageProduct && !store.mapRenderData.gridData) {
+                removeGridLayer();
+                removeConvectionLayers();
+                return
+            }
+            removeConvectionProductLayer();
+            // 离开风险视图（如切到暴雨实况）时立即撤掉乡镇风险层，避免等数据到达前残留
+            removeConvectionLayers();
             const gridData = store.mapRenderData.gridData
             const colorResources = getColorScaleResources()
             if (!gridData || !zjqxMap || !colorResources) {
                 removeGridLayer();
                 return;
             }
-            removeConvectionLayers();
 
             const renderGridData = getRenderGridData(gridData)
 
@@ -868,7 +1002,9 @@ onMounted(async () => {
                     data: grid,
                     palette: colorResources.palette,
                     colorize: colorResources.colorize,
-                    clip: mapControlStore.mapClipEnabled ? { geometry: adminBoundary } : undefined,
+                    clip: mapControlStore.mapClipEnabled
+                        ? { geometry: store.isConvectionImageProduct ? (mapControlStore.selectedRegionBoundary || adminBoundary) : adminBoundary }
+                        : undefined,
                     ...getMainGridControlOptions(),
                     popup: false,
                     zIndex: 300,
@@ -894,12 +1030,22 @@ onMounted(async () => {
         }, { immediate: true, deep: true });
 
         watch(() => [
-            store.isConvectionMode,
+            store.isConvectionRiskView,
             store.mapRenderData.convectionData,
             store.currentConvectionFrame,
             store.timeline.currentLabel?.filePath,
         ], () => {
             ensureConvectionLayers();
+        }, { immediate: true, deep: true });
+
+        watch(() => [
+            store.isConvectionImageProduct,
+            store.mapRenderData.convectionProductImage,
+            mapControlStore.selectedRegionKey,
+            mapControlStore.selectedRegionBoundary,
+        ], () => {
+            syncConvectionProductExtent();
+            renderConvectionProductLayer();
         }, { immediate: true, deep: true });
 
         watch(() => [mapControlStore.gridFillEnabled, mapControlStore.gridValueVisible], () => {
@@ -909,6 +1055,7 @@ onMounted(async () => {
         watch(() => mapControlStore.mapClipEnabled, () => {
             applyGridClip();
             convectionTownLayer?.changed();
+            convectionProductLayer?.changed();
         }, { immediate: true });
 
         watch(() => [
@@ -956,6 +1103,8 @@ onUnmounted(() => {
     layerToolbarStore.setMap(null);
     mapControlStore.removeAllControlLayers();
     mapControlStore.setMap(null);
+    disposeConvectionProductLayer?.();
+    disposeConvectionProductLayer = null;
     if (zjqxMap) {
         zjqxMap.remove();
         zjqxMap = null;

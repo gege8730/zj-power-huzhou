@@ -205,6 +205,29 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
   /** 地闪渲染令牌，避免快速切换时旧请求覆盖新状态 */
   let lightningRenderToken = 0
 
+  /** 地闪时间窗（分钟），0 表示接口默认范围；强对流雷电实况固定取最近 10 分钟 */
+  const lightningWindowMinutes = ref(0)
+  let lightningAutoActivated = false
+
+  /** 强对流「雷电-实况」：自动叠加最近 10 分钟地闪；离开时自动关闭 */
+  async function setConvectionLightning(enabled: boolean) {
+    if (enabled) {
+      lightningWindowMinutes.value = 10
+      if (isLightningActive.value) {
+        await renderLightningLayer()
+        return
+      }
+      lightningAutoActivated = true
+      activateToolbarKey('lightning')
+      await renderLightningLayer()
+      return
+    }
+    lightningWindowMinutes.value = 0
+    if (lightningAutoActivated) {
+      lightningAutoActivated = false
+      closeToolbarLayer('lightning')
+    }
+  }
   /** 输电线路渲染令牌，避免快速切换时旧请求覆盖新状态 */
   let electricLineRenderToken = 0
 
@@ -425,7 +448,14 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     lightningData.value = []
     try {
       const response = await getThunderList({ litCity: LIGHTNING_CITY })
-      const list = normalizeLightningResponse(response)
+      let list = normalizeLightningResponse(response)
+      if (lightningWindowMinutes.value) {
+        const since = dayjs().subtract(lightningWindowMinutes.value, 'minute')
+        list = list.filter((item) => {
+          const itemTime = dayjs(item.Datetime)
+          return !itemTime.isValid() || !itemTime.isBefore(since)
+        })
+      }
       lightningData.value = list
       lightningTitleTime.value = dayjs().format('YYYY-MM-DD HH:00:00')
       return list
@@ -470,7 +500,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
       deactivateToolbarKey('lightning')
       lightningData.value = []
       lightningTitleTime.value = ''
-      ElMessage.warning('近一小时内没有地闪活动')
+      ElMessage.warning(lightningWindowMinutes.value ? `近${lightningWindowMinutes.value}分钟内没有地闪活动` : '近一小时内没有地闪活动')
       return
     }
 
@@ -728,6 +758,7 @@ export const useLayerToolbarStore = defineStore('layerToolbar', () => {
     isToolbarActive,
     setMap,
     handleToolbarClick,
+    setConvectionLightning,
     loadRadarImages,
     renderRadarLayer,
     removeRadarLayer,

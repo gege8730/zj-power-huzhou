@@ -1,6 +1,15 @@
 <template>
   <div
-    v-if="!store.isConvectionMode && legendItems.length"
+    v-if="store.isConvectionDeterministicProduct"
+    class="deterministic-legend"
+    :class="{ 'with-electric-line-legend': layerStore.electricLineLegendVisible }"
+  >
+    <div class="deterministic-title">风险<br>等级</div>
+    <div class="deterministic-item occur">出现</div>
+    <div class="deterministic-item none">不出现</div>
+  </div>
+  <div
+    v-else-if="!store.isConvectionRiskView && legendItems.length"
     class="legend-wrap"
     :class="{ 'with-electric-line-legend': layerStore.electricLineLegendVisible }"
   >
@@ -45,6 +54,53 @@ const formatValue = (value: number) => Number.isInteger(value) ? String(value) :
 </script>
 
 <style scoped>
+.deterministic-legend {
+  position: absolute;
+  right: 1.7%;
+  top: 36%;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: clamp(1.45rem, 1.5vw, 1.85rem);
+  color: #fff;
+  font-weight: 800;
+  font-size: clamp(0.72rem, 0.78vw, 0.9rem);
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 0 0.32rem rgba(0, 12, 32, 0.86);
+  transition: transform 0.22s ease;
+}
+
+.deterministic-legend.with-electric-line-legend {
+  transform: translateY(calc(-1 * clamp(5.2rem, 10vh, 7.2rem)));
+}
+
+.deterministic-title {
+  margin-bottom: 0.28rem;
+}
+
+.deterministic-item {
+  min-height: clamp(3.2rem, 8vh, 4.65rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.12rem;
+  writing-mode: vertical-rl;
+  letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.deterministic-item.occur {
+  background: #f14b57;
+}
+
+.deterministic-item.none {
+  color: #333;
+  background: #fff;
+  text-shadow: none;
+}
+
 .legend-wrap {
   position: absolute;
   right: 1.2%;

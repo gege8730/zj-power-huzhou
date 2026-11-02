@@ -251,9 +251,19 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
   const stationValueVisible = computed(
     () => getItem("stationValue")?.checked ?? true,
   );
-  const gridFillEnabled = computed(() => getGroup("fill")?.enabled ?? true);
+  /** 强对流的要素/概率/确定性预报不提供填色开关，且默认不显示数值 */
+  const fillControlHidden = computed(() => {
+    const mapStore = useMapStore();
+    return mapStore.isConvectionImageProduct || mapStore.isConvectionGridForecast;
+  });
+  const gridFillEnabled = computed(
+    () => fillControlHidden.value || (getGroup("fill")?.enabled ?? true),
+  );
   const gridValueVisible = computed(
-    () => gridFillEnabled.value && (getItem("fillValue")?.checked ?? true),
+    () =>
+      !fillControlHidden.value &&
+      gridFillEnabled.value &&
+      (getItem("fillValue")?.checked ?? true),
   );
   const countyBoundaryVisible = computed(
     () => getItem("countyBoundary")?.checked ?? true,
@@ -273,6 +283,7 @@ export const useMapControlGroupStore = defineStore("mapControlGroup", () => {
     return groups.value.filter((group) => {
       if (group.key === "autoStation") return !mapStore.isConvectionMode;
       if (group.key === "region") return mapStore.isConvectionMode;
+      if (group.key === "fill") return !fillControlHidden.value;
       return true;
     });
   });

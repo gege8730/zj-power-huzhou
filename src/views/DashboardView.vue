@@ -34,12 +34,13 @@ import { onMounted, ref, watch } from 'vue'
 import { getTimeList, hzSmailDay, getDqByHz, dayForecast, getShortTermWarning, getTyphoonReportList } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
-import { useLayoutStore, useMapStore } from '@/store'
+import { useLayoutStore, useMapStore, useLayerToolbarStore } from '@/store'
 import dayjs from 'dayjs'
 import { useRoute } from 'vue-router'
 
 const store = useMapStore()
 const layoutStore = useLayoutStore()
+const layerToolbarStore = useLayerToolbarStore()
 const route = useRoute()
 
 const initData = ref(rawMock as unknown as DashboardMock)
@@ -75,8 +76,24 @@ const fetchData = async () => {
   const requestSerial = ++timelineRequestSerial
   const requestProductMode = store.productMode
   const requestSelection = store.currentSelection
-  if (store.isConvectionMode) {
-    // 未接入接口的产品（暴雨/大风/雷达/雷电/冰雹 等）先给占位提示
+  const lightningLive = store.isConvectionLightningLive
+  if (lightningLive) {
+    initData.value.timeline = []
+    initData.value.mapTitle = store.maptitle
+    store.initTimeline([])
+    await layerToolbarStore.setConvectionLightning(true)
+    return
+  }
+  await layerToolbarStore.setConvectionLightning(false)
+  if (store.isConvectionImageProduct) {
+    await store.loadConvectionProductTimeline()
+    if (!isTimelineRequestCurrent(requestSerial, requestProductMode, requestSelection)) return
+    initData.value.timeline = store.timeline.labels
+    initData.value.mapTitle = store.maptitle
+    return
+  }
+  if (store.isConvectionRiskView) {
+    // 未接入接口的产品（大风/雷达/雷电/冰雹 等）先给占位提示
     if (store.timelineParams.ele === '') {
       store.setConvectionWarningData(null)
       ElMessage.warning('该产品开发中')
@@ -143,7 +160,7 @@ const fetchWaringData = async () => {
     }
     initData.value.warning = warningData
     store.setConvectionWarningData(warningData)
-    if (store.isConvectionMode) {
+    if (store.isConvectionRiskView) {
       initData.value.timeline = store.timeline.labels
       initData.value.mapTitle = store.maptitle
     }
