@@ -53,8 +53,15 @@
     </div>
 
     <div class="header-actions">
-      <div class="help">
-        <img src="../../assets/@.png" alt="帮助" />{{ helpText }}
+      <div class="user-info">
+        <svg class="user-icon" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="5.2" r="2.85" fill="currentColor" />
+          <path
+            d="M8 9.5c-3.05 0-5.5 1.95-5.5 4.4 0 .6.48 1.1 1.08 1.1h8.84c.6 0 1.08-.5 1.08-1.1 0-2.45-2.45-4.4-5.5-4.4z"
+            fill="currentColor"
+          />
+        </svg>
+        {{ userText }}
       </div>
       <span
         class="fullscreen-btn"
@@ -62,7 +69,34 @@
         :title="layoutStore.isMapFullscreen ? '退出全屏' : '全屏'"
         @click="layoutStore.toggleMapFullscreen()"
       >
-        <span class="fullscreen-icon" aria-hidden="true"></span>
+        <svg class="fullscreen-icon" viewBox="0 0 16 16" aria-hidden="true">
+          <g
+            v-if="!layoutStore.isMapFullscreen"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.35"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M2 6V3.4A1.4 1.4 0 0 1 3.4 2H6" />
+            <path d="M10 2h2.6A1.4 1.4 0 0 1 14 3.4V6" />
+            <path d="M14 10v2.6a1.4 1.4 0 0 1-1.4 1.4H10" />
+            <path d="M6 14H3.4A1.4 1.4 0 0 1 2 12.6V10" />
+          </g>
+          <g
+            v-else
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.35"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M6 2v2.6A1.4 1.4 0 0 1 4.6 6H2" />
+            <path d="M14 6h-2.6A1.4 1.4 0 0 1 10 4.6V2" />
+            <path d="M10 14v-2.6a1.4 1.4 0 0 1 1.4-1.4H14" />
+            <path d="M2 10h2.6A1.4 1.4 0 0 1 6 11.4V14" />
+          </g>
+        </svg>
         <span>{{ layoutStore.isMapFullscreen ? "退出全屏" : "全屏" }}</span>
       </span>
     </div>
@@ -84,7 +118,7 @@ dayjs.locale("zh-cn");
 let currentTime = ref(dayjs().format("HH:mm:ss"));
 let date = dayjs().format("YYYY年MM月DD日");
 let week = dayjs().format("dddd");
-let helpText = "告警规则说明";
+const userText = "用户793633";
 let timer: number;
 const router = useRouter();
 const route = useRoute();
@@ -375,13 +409,19 @@ h1 {
   gap: clamp(0.55rem, 0.75vw, 0.9rem);
 }
 
-.help {
+.user-info {
   color: #c3e8f8;
   font-size: clamp(0.75rem, 0.75vw, 0.95rem);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.34rem;
   white-space: nowrap;
+}
+
+.user-icon {
+  width: clamp(0.95rem, 1vw, 1.15rem);
+  height: clamp(0.95rem, 1vw, 1.15rem);
+  flex: 0 0 auto;
 }
 
 .fullscreen-btn {
@@ -407,53 +447,9 @@ h1 {
 }
 
 .fullscreen-icon {
-  position: relative;
-  width: 0.9rem;
-  height: 0.9rem;
-  flex: 0 0 0.9rem;
-}
-
-.fullscreen-icon::before,
-.fullscreen-icon::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px solid currentColor;
-}
-
-.fullscreen-icon::before {
-  clip-path: polygon(
-    0 0,
-    43% 0,
-    43% 12%,
-    12% 12%,
-    12% 43%,
-    0 43%,
-    0 0,
-    57% 0,
-    100% 0,
-    100% 43%,
-    88% 43%,
-    88% 12%,
-    57% 12%
-  );
-}
-
-.fullscreen-icon::after {
-  clip-path: polygon(
-    0 57%,
-    12% 57%,
-    12% 88%,
-    43% 88%,
-    43% 100%,
-    0 100%,
-    0 57%,
-    57% 88%,
-    88% 88%,
-    88% 57%,
-    100% 57%,
-    100% 100%,
-    57% 100%
-  );
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 0.95rem;
+  overflow: visible;
 }
 </style>

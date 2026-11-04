@@ -198,9 +198,10 @@ const SCMOC_LEVEL_COLOR_CONFIG: MapColorConfig = {
 const SCMOC_DETERMINISTIC_COLOR_CONFIG: MapColorConfig = {
   unit: '',
   fieldName: 'value',
+  // 接口编码：-1 = 不出现，正数（雷电 4 / 大风 61 / 暴雨 63 等）= 出现
   stops: [
-    { value: -1, color: '#e32400' },
-    { value: 0, color: '#f5f5f5' },
+    { value: -1, color: '#f5f5f5' },
+    { value: 0, color: '#e32400' },
   ],
 }
 
