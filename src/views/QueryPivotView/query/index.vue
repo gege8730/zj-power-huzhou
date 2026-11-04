@@ -28,7 +28,8 @@
         </div>
       </div>
       <div class="top-actions">
-        <el-button class="action-btn" type="primary" @click="handleDownload">
+        <!-- 数据下载暂未开放 -->
+        <el-button class="action-btn" type="primary" disabled title="暂未开放">
           <img src="../../../assets/queryPivot/download.png" class="btn-icon" />
           数据下载
         </el-button>
@@ -122,7 +123,7 @@
               class="query-submit"
               type="primary"
               :loading="liveLoading"
-              @click="handleLiveQuery"
+              @click="handleLiveQuery()"
               >查询</el-button
             >
           </div>
@@ -148,13 +149,13 @@
                 class="date-control"
                 :disabled-date="disabledFutureDate"
               />
-              <!-- 起报时次只有 08 时 / 20 时 -->
+              <!-- 起报时次：默认当前整点，可选任意整点 -->
               <el-time-select
                 v-model="forecastForm.startHour"
                 class="hour-control"
-                start="08:00"
-                step="12:00"
-                end="20:00"
+                start="00:00"
+                step="01:00"
+                end="23:00"
                 placeholder="时次"
               />
             </div>
@@ -176,6 +177,8 @@
                 v-for="f in factorOptions"
                 :key="f.value"
                 :value="f.value"
+                :disabled="!f.supported"
+                :title="f.supported ? '' : '接口暂未提供该要素数据'"
                 >{{ f.label }}</el-checkbox
               >
             </el-checkbox-group>
@@ -185,7 +188,7 @@
               class="query-submit"
               type="primary"
               :loading="forecastLoading"
-              @click="handleForecastQuery"
+              @click="handleForecastQuery()"
               >查询</el-button
             >
           </div>
@@ -293,7 +296,7 @@
                 v-if="forecastColumnVisible.rain"
                 prop="forecastRain"
                 label="累计降水量(mm)"
-                min-width="110"
+                min-width="200"
                 align="center"
               />
               <el-table-column
@@ -312,7 +315,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 import dayjs from "dayjs";
 import {
@@ -326,15 +329,17 @@ import {
 type ForecastElement = "ww" | "tem" | "pre" | "windEx";
 
 // 预报查询的要素选项：value 对应表格列，element 对应接口要素编码
+// supported=false：后端预报接口目前只有 pre（降水）有值，ww / tem / windEx 全为 null，先置灰
 const factorOptions: Array<{
   value: string;
   label: string;
   element: ForecastElement;
+  supported: boolean;
 }> = [
-  { value: "weather", label: "天气", element: "ww" },
-  { value: "temp", label: "气温", element: "tem" },
-  { value: "rain", label: "降水", element: "pre" },
-  { value: "wind", label: "极大风速", element: "windEx" },
+  { value: "weather", label: "天气", element: "ww", supported: false },
+  { value: "temp", label: "气温", element: "tem", supported: false },
+  { value: "rain", label: "降水", element: "pre", supported: true },
+  { value: "wind", label: "极大风速", element: "windEx", supported: false },
 ];
 
 // 实况查询方式对应要素集：小时查询 / 时段查询
@@ -406,18 +411,39 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** 实况查询默认日期：2 天前 ~ 今天（接口只接受整点） */
-function defaultLiveStartDate(): string {
-  const now = new Date();
-  return formatDate(
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2),
-  );
-}
-function defaultLiveEndDate(): string {
-  return formatDate(new Date());
+/** 整点的时次文本，例如 15:00 */
+function hourText(date: Date): string {
+  return `${pad(date.getHours())}:00`;
 }
 
-// 预报查询：限制日期为未来 3 天（今天 + 后 2 天）
+/**
+ * 实况查询默认时间范围：前一小时 ~ 当前整点。
+ * 每次进入页面（组件重建）都会按当时的系统时间重新取一次。
+ */
+function defaultLiveRange() {
+  const end = new Date();
+  const start = new Date(end.getTime() - 60 * 60 * 1000);
+  return {
+    startDate: formatDate(start),
+    startHour: hourText(start),
+    endDate: formatDate(end),
+    endHour: hourText(end),
+  };
+}
+
+/**
+ * 预报查询默认取当前时间起的未来 12 小时：起报时次 = 当前整点，时效默认 12 小时。
+ * 接口对任意整点 ptime 都能返回数据，不必限制 08 / 20 时。
+ */
+function defaultForecastIssue() {
+  const now = new Date();
+  return { date: formatDate(now), hour: hourText(now) };
+}
+
+const INITIAL_LIVE_RANGE = defaultLiveRange();
+const INITIAL_FORECAST_ISSUE = defaultForecastIssue();
+
+// 预报查询：可选 今天 ~ 未来 2 天
 function disabledFutureDate(date: Date): boolean {
   const now = new Date();
   const min = new Date(
@@ -441,13 +467,8 @@ function disabledFutureDate(date: Date): boolean {
   return date < min || date > max;
 }
 
-// 预报查询默认起报日期 = 今天
-function defaultForecastDate(): string {
-  return formatDate(new Date());
-}
-
-// 预报查询默认起报时间 = 今天 08 时
-const FORECAST_DEFAULT_HOUR = "08:00";
+// 预报查询起报时次的兜底值（清空后回填用）
+const FORECAST_DEFAULT_HOUR = hourText(new Date());
 
 const topForm = reactive({
   city: "huzhou",
@@ -456,10 +477,10 @@ const topForm = reactive({
 
 const liveForm = reactive({
   enabled: true,
-  startDate: defaultLiveStartDate(),
-  startHour: "00:00",
-  endDate: defaultLiveEndDate(),
-  endHour: "23:00",
+  startDate: INITIAL_LIVE_RANGE.startDate,
+  startHour: INITIAL_LIVE_RANGE.startHour,
+  endDate: INITIAL_LIVE_RANGE.endDate,
+  endHour: INITIAL_LIVE_RANGE.endHour,
   queryMode: "hourly",
   factors: ["weather", "hourlyRain", "maxWind", "avgTemp"],
 });
@@ -496,6 +517,12 @@ const currentCountyCode = computed(
     "",
 );
 
+/** 当前区县名，用于过滤接口返回的多余区县 */
+const currentCountyName = computed(
+  () =>
+    districtOptions.find((item) => item.value === topForm.district)?.label ?? "",
+);
+
 /** 要素勾选 -> 接口 elements 参数，按接口固定顺序拼接 */
 function buildElementsParam(): string {
   const selected = new Set(
@@ -526,7 +553,7 @@ const rainColumnLabel = computed(() =>
 function buildForecastElementsParam(): string {
   const selected = new Set<ForecastElement>(
     factorOptions
-      .filter((f) => forecastForm.factors.includes(f.value))
+      .filter((f) => f.supported && forecastForm.factors.includes(f.value))
       .map((f) => f.element),
   );
   const order: ForecastElement[] = ["ww", "pre", "windEx", "tem"];
@@ -544,22 +571,30 @@ const forecastColumnVisible = computed(() => {
   };
 });
 
-/** 表格空态文案：未查询过 vs 查过但无数据 */
+/** 表格空态文案：未查询过 / 查过无数据 / 查询失败 */
 const queried = ref(false);
 const forecastQueried = ref(false);
-const resultEmptyText = computed(() =>
-  queried.value || forecastQueried.value
-    ? "该条件下暂无数据"
-    : "请选择条件后查询",
+// 两次查询并行发起，失败原因各自记录，避免互相覆盖
+const liveError = ref("");
+const forecastError = ref("");
+const resultError = computed(() =>
+  [liveError.value, forecastError.value].filter(Boolean).join("；"),
 );
+const resultEmptyText = computed(() => {
+  if (resultError.value) return `查询失败：${resultError.value}`;
+  return queried.value || forecastQueried.value
+    ? "该条件下暂无数据"
+    : "请选择条件后查询";
+});
 
 const forecastForm = reactive({
   enabled: true,
   // 起报时间：日期 + 时次，时次只给 08 时 / 20 时
-  startDate: defaultForecastDate(),
-  startHour: FORECAST_DEFAULT_HOUR,
-  hourSelect: "hour24",
-  factors: ["weather", "temp", "rain", "wind"] as string[],
+  startDate: INITIAL_FORECAST_ISSUE.date,
+  startHour: INITIAL_FORECAST_ISSUE.hour,
+  // 默认取当前时间起的未来 12 小时；要素只勾选接口有数据的降水
+  hourSelect: "hour12",
+  factors: ["rain"] as string[],
 });
 
 /** 起报时间拼成整点，例如 2026-11-04 08:00:00 */
@@ -571,6 +606,9 @@ const forecastStartTime = computed(() =>
 
 const liveLoading = ref(false);
 const forecastLoading = ref(false);
+// 查询序号：切换区县等操作会连续触发查询，只有最后一次的结果才允许写回
+let liveRequestId = 0;
+let forecastRequestId = 0;
 
 /** 查询结果行：实况表与预报表各自独立使用 */
 interface QueryRow {
@@ -598,9 +636,13 @@ const liveRangeLabel = computed(() => {
 });
 
 const forecastRangeLabel = computed(() => {
-  if (!forecastForm.startDate) return "预报数据";
+  if (!forecastForm.startDate || !forecastForm.startHour) return "预报数据";
   const hours = forecastForm.hourSelect === "hour24" ? 24 : 12;
-  return `${forecastForm.startDate} ${forecastForm.startHour}起报${hours}小时预报数据`;
+  const start = dayjs(`${forecastForm.startDate} ${forecastForm.startHour}:00`);
+  if (!start.isValid()) return "预报数据";
+  // 起报时间 ~ 预报结束时间（起报 + 时效），格式与实况表头保持一致
+  const end = start.add(hours, "hour");
+  return `${start.format("YYYY-MM-DD HH:mm")}~${end.format("YYYY-MM-DD HH:mm")}`;
 });
 
 function toText(value: unknown): string {
@@ -622,6 +664,22 @@ function sortByCounty(list: TownWeatherItem[]): TownWeatherItem[] {
       String(a.countyCode).localeCompare(String(b.countyCode)) ||
       String(a.townCode).localeCompare(String(b.townCode)),
   );
+}
+
+/**
+ * 选中区县时只保留选中区县的记录。
+ * 以接口返回的 countyName 为准：后端把南浔的旧馆街道 / 东迁街道挂在了 330502000000（吴兴）下，
+ * 只按 countyCode 过滤会让吴兴查询里冒出南浔的城镇。
+ */
+function filterByCounty(list: TownWeatherItem[]): TownWeatherItem[] {
+  const code = currentCountyCode.value;
+  if (!code) return list;
+  const name = currentCountyName.value;
+  return list.filter((item) => {
+    const itemName = String(item.countyName ?? "");
+    if (itemName) return itemName === name;
+    return String(item.countyCode ?? "") === code;
+  });
 }
 
 /**
@@ -818,7 +876,8 @@ function mergeResultRows({
   return { rowspan, colspan: 1 };
 }
 
-async function handleLiveQuery() {
+async function handleLiveQuery(options: { silent?: boolean } = {}) {
+  const { silent = false } = options;
   if (!liveForm.enabled) {
     ElMessage.warning("请先勾选实况查询");
     return;
@@ -828,6 +887,7 @@ async function handleLiveQuery() {
     return;
   }
   liveLoading.value = true;
+  const requestId = ++liveRequestId;
   // 控件只给整点，这里再兜一次底，保证传给接口的时分秒一定是 00:00:00
   const startTime = dayjs(liveStartTime.value).startOf("hour").format("YYYYMMDDHHmmss");
   const endTime = dayjs(liveEndTime.value).startOf("hour").format("YYYYMMDDHHmmss");
@@ -848,27 +908,33 @@ async function handleLiveQuery() {
   };
   try {
     const res = await getHzElectriCityStationTownWeather(params);
-    console.log("[城镇天气] 实况查询参数", params);
-    console.log("[城镇天气] 实况查询响应", res);
-    liveRows.value = mapTownWeatherRows(res.DS ?? [], queryType);
+    // 请求期间又发起了新查询（例如切换区县），旧结果直接丢弃
+    if (requestId !== liveRequestId) return;
+    liveRows.value = mapTownWeatherRows(filterByCounty(res.DS ?? []), queryType);
     queried.value = true;
+    liveError.value = "";
     if (!liveRows.value.length) {
-      ElMessage.info(
-        currentCountyCode.value ? "该区县暂无数据" : "该条件下暂无数据",
-      );
-    } else {
+      if (!silent) {
+        ElMessage.info(
+          currentCountyCode.value ? "该区县暂无数据" : "该条件下暂无数据",
+        );
+      }
+    } else if (!silent) {
       ElMessage.success(`查询完成，共 ${liveRows.value.length} 条`);
     }
   } catch (error) {
+    if (requestId !== liveRequestId) return;
     console.error("[城镇天气] 实况查询失败", error);
     liveRows.value = [];
+    liveError.value = (error as Error)?.message || "实况查询失败";
     ElMessage.error("实况查询失败");
   } finally {
-    liveLoading.value = false;
+    if (requestId === liveRequestId) liveLoading.value = false;
   }
 }
 
-async function handleForecastQuery() {
+async function handleForecastQuery(options: { silent?: boolean } = {}) {
+  const { silent = false } = options;
   if (!forecastForm.enabled) {
     ElMessage.warning("请先勾选预报查询");
     return;
@@ -884,6 +950,7 @@ async function handleForecastQuery() {
   }
 
   forecastLoading.value = true;
+  const requestId = ++forecastRequestId;
   const params = {
     ptime: dayjs(forecastStartTime.value)
       .startOf("hour")
@@ -894,28 +961,28 @@ async function handleForecastQuery() {
   };
   try {
     const res = await getHzElectriCityForecastTownWeather(params);
-    console.log("[城镇天气] 预报查询参数", params);
-    console.log("[城镇天气] 预报查询响应", res);
-    forecastRows.value = mapForecastRows(res.DS ?? []);
+    if (requestId !== forecastRequestId) return;
+    forecastRows.value = mapForecastRows(filterByCounty(res.DS ?? []));
     forecastQueried.value = true;
+    forecastError.value = "";
     if (!forecastRows.value.length) {
-      ElMessage.info(
-        currentCountyCode.value ? "该区县暂无预报数据" : "该条件下暂无预报数据",
-      );
-    } else {
+      if (!silent) {
+        ElMessage.info(
+          currentCountyCode.value ? "该区县暂无预报数据" : "该条件下暂无预报数据",
+        );
+      }
+    } else if (!silent) {
       ElMessage.success(`预报查询完成，共 ${forecastRows.value.length} 条`);
     }
   } catch (error) {
+    if (requestId !== forecastRequestId) return;
     console.error("[城镇天气] 预报查询失败", error);
     forecastRows.value = [];
+    forecastError.value = (error as Error)?.message || "预报查询失败";
     ElMessage.error("预报查询失败");
   } finally {
-    forecastLoading.value = false;
+    if (requestId === forecastRequestId) forecastLoading.value = false;
   }
-}
-
-function handleDownload() {
-  ElMessage.success("开始下载查询结果（当前为示例）");
 }
 
 function handleClear() {
@@ -929,8 +996,25 @@ function handleClear() {
   forecastRows.value = [];
   queried.value = false;
   forecastQueried.value = false;
+  liveError.value = "";
+  forecastError.value = "";
   ElMessage.info("已清空");
 }
+
+// 首次进入页面：默认条件已按当前时间填好，这里直接自动取一次数，表格即刻出结果
+onMounted(() => {
+  if (liveForm.enabled) void handleLiveQuery({ silent: true });
+  if (forecastForm.enabled) void handleForecastQuery({ silent: true });
+});
+
+// 切换区县后立即按新的 countyCode 重新取数，否则表格里留着的是上一个区县的数据
+watch(
+  () => topForm.district,
+  () => {
+    if (liveForm.enabled) void handleLiveQuery({ silent: true });
+    if (forecastForm.enabled) void handleForecastQuery({ silent: true });
+  },
+);
 </script>
 
 <style lang="less" scoped>
