@@ -23,7 +23,7 @@
       :class="{ disabled: !canPlay, playing: isPlaying }"
       type="button"
       :aria-label="isPlaying ? '暂停播放' : '播放'"
-      :title="canPlay ? (isPlaying ? '暂停播放' : '从前一天12时开始逐小时播放') : '当前要素暂不支持逐小时播放'"
+      :title="canPlay ? (isPlaying ? '暂停播放' : (store.isConvectionRiskView ? '从第一个时次开始播放' : '从前一天12时开始逐小时播放')) : '当前要素暂不支持逐小时播放'"
       :disabled="!canPlay"
       @click="togglePlay"
     >
@@ -179,13 +179,14 @@ let playToken = 0
 let playTimer: ReturnType<typeof window.setTimeout> | null = null
 
 const canPlay = computed(() => {
+  if (store.isConvectionRiskView) return timelinelist.value.length > 1
   const duration = store.currentFactor.eleDuration[store.currentOptionIndex]
-  return !store.isConvectionRiskView && duration === 'H' && timelinelist.value.length > 1
+  return duration === 'H' && timelinelist.value.length > 1
 })
 
 const getPlayStartIndex = () => {
   const labels = store.timeline.labels
-  if (store.isForecastMode || !labels.length) return 0
+  if (store.isConvectionRiskView || store.isForecastMode || !labels.length) return 0
 
   const latest = dayjs(labels[labels.length - 1].dateTime)
   const target = latest.subtract(1, 'day').hour(12).minute(0).second(0)

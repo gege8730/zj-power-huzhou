@@ -73,7 +73,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useLayoutStore, useMapStore } from "@/store";
+import { useLayoutStore } from "@/store";
 import { computed } from "vue";
 
 defineProps<{
@@ -89,36 +89,20 @@ let timer: number;
 const router = useRouter();
 const route = useRoute();
 const layoutStore = useLayoutStore();
-const mapStore = useMapStore();
 
-// 当前路由高亮：首页精确匹配（强对流场景下首页不高亮），数据查询按前缀匹配
-// 场景高亮只在仪表盘路由生效，避免在数据查询页误亮「强对流」
-const isConvection = computed(() => route.path === "/" && mapStore.isConvectionMode);
-const isHome = computed(() => route.path === "/" && !isConvection.value);
+// 当前路由高亮：首页/强对流按路由精确匹配，数据查询按前缀匹配
+const isConvection = computed(() => route.path === "/convection");
+const isHome = computed(() => route.path === "/");
 const isQueryPivot = computed(() => route.path.startsWith("/queryPivot/"));
 
-/** 强对流场景通过 URL 表达，刷新/后退都能回到正确场景 */
-function syncSceneQuery(scene?: "convection") {
-  const query = { ...route.query };
-  if (scene) query.scene = scene;
-  else delete query.scene;
-
-  if (route.path !== "/") {
-    router.push({ path: "/", query });
-    return;
-  }
-  router.replace({ query });
-}
-
 function enterConvection() {
-  if (mapStore.isConvectionMode) return;
-  mapStore.setScene("convection");
-  syncSceneQuery("convection");
+  if (route.path === "/convection") return;
+  router.push("/convection");
 }
 
 function goHome() {
-  if (mapStore.isConvectionMode) mapStore.setScene("home");
-  syncSceneQuery();
+  if (route.path === "/") return;
+  router.push("/");
 }
 
 onMounted(() => {

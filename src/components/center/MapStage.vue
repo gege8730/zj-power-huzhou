@@ -17,8 +17,14 @@
     </div>
 
     <div class="map-bottom-tabs">
-      <button class="mini-tab" :class="{ active: store.isConvectionMode || store.productMode === 'live' }" type="button" @click="!store.isConvectionMode && store.setProductMode('live')">{{ liveTabLabel }}</button>
-      <button v-if="!store.isConvectionMode" class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">预报</button>
+      <template v-if="store.isConvectionRiskFactor">
+        <button class="mini-tab" :class="{ active: store.productMode === 'live' }" type="button" @click="store.setProductMode('live')">0-2h（实况）</button>
+        <button class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">0-24h（预报）</button>
+      </template>
+      <template v-else>
+        <button class="mini-tab" :class="{ active: store.isConvectionMode || store.productMode === 'live' }" type="button" @click="!store.isConvectionMode && store.setProductMode('live')">{{ liveTabLabel }}</button>
+        <button v-if="!store.isConvectionMode" class="mini-tab" :class="{ active: store.productMode === 'forecast' }" type="button" @click="store.setProductMode('forecast')">预报</button>
+      </template>
       <!-- <div class="datepicker-wrapper">
         <el-date-picker
           v-model="baseTimeModel"

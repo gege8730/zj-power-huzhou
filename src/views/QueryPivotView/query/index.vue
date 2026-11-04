@@ -49,23 +49,47 @@
         <div class="query-card-body">
           <div class="query-row">
             <span class="row-label">时间范围</span>
-            <el-date-picker
-              v-model="liveForm.timeStart"
-              type="datetime"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              class="date-control"
-              :disabled-date="disabledPastDate"
-              :default-time="defaultStartTime"
-            />
+            <div class="time-group">
+              <el-date-picker
+                v-model="liveForm.startDate"
+                type="date"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                placeholder="选择日期"
+                style="width: 160px;" 
+                class="date-control"
+                :disabled-date="disabledPastDate"
+              />
+              <el-time-select
+                v-model="liveForm.startHour"
+                class="hour-control"
+                start="00:00"
+                step="01:00"
+                end="23:00"
+                placeholder="时次"
+              />
+            </div>
             <span class="row-sep">至</span>
-            <el-date-picker
-              v-model="liveForm.timeEnd"
-              type="datetime"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              class="date-control"
-              :disabled-date="disabledPastDate"
-              :default-time="defaultEndTime"
-            />
+            <div class="time-group">
+              <el-date-picker
+                v-model="liveForm.endDate"
+                type="date"
+                style="width: 160px;" 
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                placeholder="选择日期"
+                class="date-control"
+                :disabled-date="disabledPastDate"
+              />
+              <el-time-select
+                v-model="liveForm.endHour"
+                class="hour-control"
+                start="00:00"
+                step="01:00"
+                end="23:00"
+                placeholder="时次"
+              />
+            </div>
           </div>
           <div class="query-row">
             <span class="row-label">查询方式</span>
@@ -113,17 +137,27 @@
         <div class="query-card-body">
           <div class="query-row">
             <span class="row-label">起报时间</span>
-            <el-date-picker
-              v-model="forecastForm.startTime"
-              type="datetime"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              class="date-control"
-              :disabled-date="disabledFutureDate"
-              :disabled-hours="disabledForecastHours"
-              :disabled-minutes="disabledForecastMinutes"
-              :disabled-seconds="disabledForecastSeconds"
-              :default-time="defaultForecastTime"
-            />
+            <div class="time-group">
+              <el-date-picker
+                v-model="forecastForm.startDate"
+                type="date"
+                format="YYYY-MM-DD"
+                style="width: 160px;" 
+                value-format="YYYY-MM-DD"
+                placeholder="选择日期"
+                class="date-control"
+                :disabled-date="disabledFutureDate"
+              />
+              <!-- 起报时次只有 08 时 / 20 时 -->
+              <el-time-select
+                v-model="forecastForm.startHour"
+                class="hour-control"
+                start="08:00"
+                step="12:00"
+                end="20:00"
+                placeholder="时次"
+              />
+            </div>
           </div>
           <div class="query-row">
             <span class="row-label">预报时效</span>
@@ -165,137 +199,113 @@
         <span class="panel-text" data-title="查询结果">查询结果</span>
       </div>
       <div class="panel-body">
-        <div class="result-grid">
-          <!-- 实况数据表 -->
-          <div class="result-table-block">
-            <el-table
-              class="query-result-table"
-              :data="liveRows"
-              :span-method="mergeLiveRows"
-              height="100%"
-              size="default"
-              border
-              :empty-text="liveEmptyText"
-            >
-              <el-table-column label="实况数据" align="center">
-                <el-table-column :label="liveRangeLabel" align="center">
-                  <el-table-column
-                    prop="district"
-                    label="区县"
-                    width="90"
-                    align="center"
-                  />
-                  <el-table-column
-                    prop="street"
-                    label="街道"
-                    width="100"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="showTimeColumn"
-                    prop="time"
-                    label="时间"
-                    width="110"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="liveColumnVisible.weather"
-                    prop="weather"
-                    label="天气状况"
-                    min-width="90"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="liveColumnVisible.temp"
-                    prop="temp"
-                    label="气温(℃)"
-                    min-width="80"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="liveColumnVisible.rain"
-                    prop="rain"
-                    :label="rainColumnLabel"
-                    min-width="110"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="liveColumnVisible.wind"
-                    prop="wind"
-                    label="极大风速(m/s)"
-                    min-width="110"
-                    align="center"
-                  />
-                </el-table-column>
-              </el-table-column>
-            </el-table>
-          </div>
+        <!-- 单表：实况 / 预报按「区县 + 街道」对齐并列，表头分三级 -->
+        <el-table
+          class="query-result-table"
+          :data="resultRows"
+          :span-method="mergeResultRows"
+          height="100%"
+          size="default"
+          border
+          :empty-text="resultEmptyText"
+        >
+          <!-- 信息列：表头跨满 3 行，表体按区县 / 街道纵向合并 -->
+          <el-table-column
+            prop="district"
+            label="区县"
+            width="90"
+            align="center"
+          />
+          <el-table-column
+            prop="street"
+            label="街道"
+            width="110"
+            align="center"
+          />
 
-          <!-- 预报数据表（接口待接入） -->
-          <div class="result-table-block">
-            <el-table
-              class="query-result-table"
-              :data="forecastRows"
-              :span-method="mergeForecastRows"
-              height="100%"
-              size="default"
-              border
-              :empty-text="forecastEmptyText"
-            >
-              <el-table-column label="预报数据" align="center">
-                <el-table-column :label="forecastRangeLabel" align="center">
-                  <el-table-column
-                    prop="district"
-                    label="区县"
-                    width="90"
-                    align="center"
-                  />
-                  <el-table-column
-                    prop="street"
-                    label="街道"
-                    width="100"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="showForecastTimeColumn"
-                    prop="time"
-                    label="时间"
-                    width="110"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="forecastColumnVisible.weather"
-                    prop="weather"
-                    label="天气状况"
-                    min-width="90"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="forecastColumnVisible.temp"
-                    prop="temp"
-                    label="气温(℃)"
-                    min-width="80"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="forecastColumnVisible.rain"
-                    prop="rain"
-                    label="累计降水量(mm)"
-                    min-width="110"
-                    align="center"
-                  />
-                  <el-table-column
-                    v-if="forecastColumnVisible.wind"
-                    prop="wind"
-                    label="极大风速(m/s)"
-                    min-width="110"
-                    align="center"
-                  />
-                </el-table-column>
-              </el-table-column>
-            </el-table>
-          </div>
-        </div>
+          <!-- 实况数据 -->
+          <el-table-column
+            v-if="hasLiveColumns"
+            label="实况数据"
+            align="center"
+          >
+            <el-table-column :label="liveRangeLabel" align="center">
+              <el-table-column
+                v-if="showTimeColumn"
+                prop="time"
+                label="时间"
+                width="110"
+                align="center"
+              />
+              <el-table-column
+                v-if="liveColumnVisible.weather"
+                prop="liveWeather"
+                label="天气状况"
+                min-width="90"
+                align="center"
+              />
+              <el-table-column
+                v-if="liveColumnVisible.temp"
+                prop="liveTemp"
+                label="气温(℃)"
+                min-width="80"
+                align="center"
+              />
+              <el-table-column
+                v-if="liveColumnVisible.rain"
+                prop="liveRain"
+                :label="rainColumnLabel"
+                min-width="110"
+                align="center"
+              />
+              <el-table-column
+                v-if="liveColumnVisible.wind"
+                prop="liveWind"
+                label="极大风速(m/s)"
+                min-width="110"
+                align="center"
+              />
+            </el-table-column>
+          </el-table-column>
+
+          <!-- 预报数据 -->
+          <el-table-column
+            v-if="hasForecastColumns"
+            label="预报数据"
+            align="center"
+          >
+            <el-table-column :label="forecastRangeLabel" align="center">
+              <el-table-column
+                v-if="forecastColumnVisible.weather"
+                prop="forecastWeather"
+                label="天气状况"
+                min-width="90"
+                align="center"
+              />
+              <el-table-column
+                v-if="forecastColumnVisible.temp"
+                prop="forecastTemp"
+                label="气温(℃)"
+                min-width="80"
+                align="center"
+              />
+              <el-table-column
+                v-if="forecastColumnVisible.rain"
+                prop="forecastRain"
+                label="累计降水量(mm)"
+                min-width="110"
+                align="center"
+              />
+              <el-table-column
+                v-if="forecastColumnVisible.wind"
+                prop="forecastWind"
+                label="极大风速(m/s)"
+                min-width="110"
+                align="center"
+              />
+            </el-table-column>
+          </el-table-column>
+        </el-table>
       </div>
     </section>
   </div>
@@ -387,31 +397,24 @@ function disabledPastDate(date: Date): boolean {
   return date < min || date > max;
 }
 
-// el-date-picker 的 default-time：起始默认 00:00:00，结束默认 23:59:59
-const defaultStartTime = new Date(2000, 0, 1, 0, 0, 0);
-const defaultEndTime = new Date(2000, 0, 1, 23, 59, 59);
-
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
-function formatDateTime(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+/** 时间统一按整点处理：日期控件只选到天，时次控件只给整点，避免出现 23:59:59 这类值 */
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-// 实况查询默认起始 = 3 天前 00:00:00
-function defaultLiveTimeStart(): string {
+
+/** 实况查询默认日期：2 天前 ~ 今天（接口只接受整点） */
+function defaultLiveStartDate(): string {
   const now = new Date();
-  return formatDateTime(
-    new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 0, 0, 0, 0),
+  return formatDate(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2),
   );
 }
-// 实况查询默认结束 = 今天 23:59:59
-function defaultLiveTimeEnd(): string {
-  const now = new Date();
-  return formatDateTime(
-    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 0),
-  );
+function defaultLiveEndDate(): string {
+  return formatDate(new Date());
 }
 
 // 预报查询：限制日期为未来 3 天（今天 + 后 2 天）
@@ -440,29 +443,11 @@ function disabledFutureDate(date: Date): boolean {
 
 // 预报查询默认起报日期 = 今天
 function defaultForecastDate(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return formatDate(new Date());
 }
 
-// 预报查询起报时次限制：仅允许 08:00:00 和 20:00:00
-// disabled-hours/minutes/seconds 返回需禁用的下标数组
-function disabledForecastHours(): number[] {
-  return Array.from({ length: 24 }, (_, i) => i).filter((h) => h !== 8 && h !== 20);
-}
-function disabledForecastMinutes(): number[] {
-  return Array.from({ length: 60 }, (_, i) => i).filter((m) => m !== 0);
-}
-function disabledForecastSeconds(): number[] {
-  return Array.from({ length: 60 }, (_, i) => i).filter((s) => s !== 0);
-}
-
-// el-date-picker 的 default-time：选日期后默认填充 08:00:00
-const defaultForecastTime = new Date(2000, 0, 1, 8, 0, 0);
-
-// 预报查询默认起报时间 = 今天 08:00:00
-function defaultForecastStartTime(): string {
-  return `${defaultForecastDate()} 08:00:00`;
-}
+// 预报查询默认起报时间 = 今天 08 时
+const FORECAST_DEFAULT_HOUR = "08:00";
 
 const topForm = reactive({
   city: "huzhou",
@@ -471,11 +456,21 @@ const topForm = reactive({
 
 const liveForm = reactive({
   enabled: true,
-  timeStart: defaultLiveTimeStart(),
-  timeEnd: defaultLiveTimeEnd(),
+  startDate: defaultLiveStartDate(),
+  startHour: "00:00",
+  endDate: defaultLiveEndDate(),
+  endHour: "23:00",
   queryMode: "hourly",
   factors: ["weather", "hourlyRain", "maxWind", "avgTemp"],
 });
+
+/** 日期 + 时次拼成接口需要的整点时间，例如 2026-11-02 08:00:00 */
+const liveStartTime = computed(() =>
+  liveForm.startDate ? `${liveForm.startDate} ${liveForm.startHour}:00` : "",
+);
+const liveEndTime = computed(() =>
+  liveForm.endDate ? `${liveForm.endDate} ${liveForm.endHour}:00` : "",
+);
 
 // 实况查询要素选项：跟随查询方式切换
 const liveFactorOptions = computed(
@@ -551,28 +546,28 @@ const forecastColumnVisible = computed(() => {
 
 /** 表格空态文案：未查询过 vs 查过但无数据 */
 const queried = ref(false);
-const liveEmptyText = computed(() =>
-  queried.value ? "该条件下暂无数据" : "请选择条件后查询",
-);
-
-/** 预报表空态：接口接入前固定提示，接入后可沿用「已查/未查」判断 */
 const forecastQueried = ref(false);
-const forecastEmptyText = computed(() =>
-  forecastQueried.value ? "该条件下暂无数据" : "请选择条件后查询",
-);
-
-/** 预报表时间列：接口按单个起报时次返回，只有出现多个时次时才展示该列 */
-const showForecastTimeColumn = computed(
-  () => new Set(forecastRows.value.map((row) => row.time)).size > 1,
+const resultEmptyText = computed(() =>
+  queried.value || forecastQueried.value
+    ? "该条件下暂无数据"
+    : "请选择条件后查询",
 );
 
 const forecastForm = reactive({
   enabled: true,
-  // 起报时间：日期 + 时次（仅 08:00:00 / 20:00:00，由 picker 限制）
-  startTime: defaultForecastStartTime(),
+  // 起报时间：日期 + 时次，时次只给 08 时 / 20 时
+  startDate: defaultForecastDate(),
+  startHour: FORECAST_DEFAULT_HOUR,
   hourSelect: "hour24",
   factors: ["weather", "temp", "rain", "wind"] as string[],
 });
+
+/** 起报时间拼成整点，例如 2026-11-04 08:00:00 */
+const forecastStartTime = computed(() =>
+  forecastForm.startDate
+    ? `${forecastForm.startDate} ${forecastForm.startHour}:00`
+    : "",
+);
 
 const liveLoading = ref(false);
 const forecastLoading = ref(false);
@@ -598,14 +593,14 @@ const showTimeColumn = computed(() => liveForm.queryMode === "hourly");
 
 /** 表头时间文案跟随表单，避免写死日期 */
 const liveRangeLabel = computed(() => {
-  if (!liveForm.timeStart || !liveForm.timeEnd) return "实况数据";
-  return `${liveForm.timeStart}~${liveForm.timeEnd}`;
+  if (!liveForm.startDate || !liveForm.endDate) return "实况数据";
+  return `${liveForm.startDate} ${liveForm.startHour}~${liveForm.endDate} ${liveForm.endHour}`;
 });
 
 const forecastRangeLabel = computed(() => {
-  if (!forecastForm.startTime) return "预报数据";
+  if (!forecastForm.startDate) return "预报数据";
   const hours = forecastForm.hourSelect === "hour24" ? 24 : 12;
-  return `${forecastForm.startTime}起报${hours}小时预报数据`;
+  return `${forecastForm.startDate} ${forecastForm.startHour}起报${hours}小时预报数据`;
 });
 
 function toText(value: unknown): string {
@@ -680,57 +675,162 @@ function mapForecastRows(list: TownWeatherItem[]): QueryRow[] {
   });
 }
 
-// 区县 / 街道两级合并：连续且同组的行合并单元格
-// 两张表各自独立，所以用工厂函数按各自的数据源生成 span-method
-function createMergeSpan(getRows: () => QueryRow[]) {
-  return ({
-    row,
-    column,
-    rowIndex,
-  }: {
-    row: QueryRow;
-    column: { property: string };
-    rowIndex: number;
-  }) => {
-    const prop = column.property;
-    if (prop !== "district" && prop !== "street") return;
-
-    const data = getRows();
-    // 街道要按「区县 + 街道」判断，避免不同区县同名街道被误合并
-    const isSameGroup = (a: QueryRow, b: QueryRow) =>
-      prop === "district"
-        ? a.district === b.district
-        : a.district === b.district && a.street === b.street;
-
-    if (rowIndex === 0 || !isSameGroup(data[rowIndex - 1], row)) {
-      let span = 1;
-      for (let i = rowIndex + 1; i < data.length; i++) {
-        if (isSameGroup(data[i], row)) span++;
-        else break;
-      }
-      return { rowspan: span, colspan: 1 };
-    }
-    // 非首行 → 隐藏
-    return { rowspan: 0, colspan: 0 };
-  };
+/** 合并表格中的一行：实况与预报按「区县 + 街道」对齐 */
+interface ResultRow {
+  id: string;
+  district: string;
+  street: string;
+  time: string;
+  liveWeather: string;
+  liveTemp: string;
+  liveRain: string;
+  liveWind: string;
+  forecastWeather: string;
+  forecastTemp: string;
+  forecastRain: string;
+  forecastWind: string;
+  /** 同一城镇占用的行数：逐小时模式下大于 1 */
+  townRowSpan: number;
+  /** 是否该城镇的首行，预报列只在这一行渲染并向下合并 */
+  townFirstRow: boolean;
 }
 
-const mergeLiveRows = createMergeSpan(() => liveRows.value);
-const mergeForecastRows = createMergeSpan(() => forecastRows.value);
+const FORECAST_PROPS = new Set([
+  "forecastWeather",
+  "forecastTemp",
+  "forecastRain",
+  "forecastWind",
+]);
+
+const townKeyOf = (row: QueryRow) => `${row.district}|${row.street}`;
+
+/**
+ * 实况与预报是两次独立查询，这里按城镇把两半拼成同一张表。
+ * 实况逐小时模式下一个城镇有多行，预报只填首行并由 span-method 纵向合并。
+ */
+const resultRows = computed<ResultRow[]>(() => {
+  const liveByTown = new Map<string, QueryRow[]>();
+  const forecastByTown = new Map<string, QueryRow>();
+  const order: string[] = [];
+  const seen = new Set<string>();
+
+  const remember = (key: string) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    order.push(key);
+  };
+
+  liveRows.value.forEach((row) => {
+    const key = townKeyOf(row);
+    remember(key);
+    const list = liveByTown.get(key);
+    if (list) list.push(row);
+    else liveByTown.set(key, [row]);
+  });
+
+  forecastRows.value.forEach((row) => {
+    const key = townKeyOf(row);
+    remember(key);
+    if (!forecastByTown.has(key)) forecastByTown.set(key, row);
+  });
+
+  return order.flatMap((key) => {
+    const liveList = liveByTown.get(key) ?? [];
+    const forecast = forecastByTown.get(key);
+    const firstLive = liveList[0];
+    const district = firstLive?.district ?? forecast?.district ?? "";
+    const street = firstLive?.street ?? forecast?.street ?? "";
+    // 只有预报数据时也要占一行
+    const base: Array<QueryRow | undefined> = liveList.length
+      ? liveList
+      : [undefined];
+    const townRowSpan = base.length;
+
+    return base.map((live, index) => {
+      const isFirst = index === 0;
+      return {
+        id: `${key}|${index}`,
+        district,
+        street,
+        time: live?.time ?? "",
+        liveWeather: live?.weather ?? "",
+        liveTemp: live?.temp ?? "",
+        liveRain: live?.rain ?? "",
+        liveWind: live?.wind ?? "",
+        forecastWeather: isFirst ? forecast?.weather ?? "" : "",
+        forecastTemp: isFirst ? forecast?.temp ?? "" : "",
+        forecastRain: isFirst ? forecast?.rain ?? "" : "",
+        forecastWind: isFirst ? forecast?.wind ?? "" : "",
+        townRowSpan,
+        townFirstRow: isFirst,
+      };
+    });
+  });
+});
+
+/** 某一侧没有勾选任何要素时不渲染该分组，否则空分组会把表头撑坏 */
+const hasLiveColumns = computed(
+  () =>
+    showTimeColumn.value ||
+    Object.values(liveColumnVisible.value).some(Boolean),
+);
+const hasForecastColumns = computed(() =>
+  Object.values(forecastColumnVisible.value).some(Boolean),
+);
+
+// 区县 / 街道按连续相同值合并；预报列在逐小时模式下按城镇整体合并
+function mergeResultRows({
+  row,
+  column,
+  rowIndex,
+}: {
+  row: ResultRow;
+  column: { property: string };
+  rowIndex: number;
+}) {
+  const prop = column.property;
+
+  if (FORECAST_PROPS.has(prop)) {
+    if (row.townRowSpan <= 1) return;
+    return row.townFirstRow
+      ? { rowspan: row.townRowSpan, colspan: 1 }
+      : { rowspan: 0, colspan: 0 };
+  }
+
+  if (prop !== "district" && prop !== "street") return;
+
+  const data = resultRows.value;
+  // 街道要按「区县 + 街道」判断，避免不同区县同名街道被误合并
+  const isSameGroup = (a: ResultRow, b: ResultRow) =>
+    prop === "district"
+      ? a.district === b.district
+      : a.district === b.district && a.street === b.street;
+
+  const previous = data[rowIndex - 1];
+  // 非首行 → 隐藏
+  if (previous && isSameGroup(previous, row)) return { rowspan: 0, colspan: 0 };
+
+  let rowspan = 1;
+  for (let i = rowIndex + 1; i < data.length; i++) {
+    if (!isSameGroup(data[i], row)) break;
+    rowspan++;
+  }
+  return { rowspan, colspan: 1 };
+}
 
 async function handleLiveQuery() {
   if (!liveForm.enabled) {
     ElMessage.warning("请先勾选实况查询");
     return;
   }
-  if (!liveForm.timeStart || !liveForm.timeEnd) {
+  if (!liveStartTime.value || !liveEndTime.value) {
     ElMessage.warning("请选择时间范围");
     return;
   }
   liveLoading.value = true;
-  // 接口只接受整点时间
-  const startTime = dayjs(liveForm.timeStart).startOf("hour").format("YYYYMMDDHHmmss");
-  const endTime = dayjs(liveForm.timeEnd).startOf("hour").format("YYYYMMDDHHmmss");
+  // 控件只给整点，这里再兜一次底，保证传给接口的时分秒一定是 00:00:00
+  const startTime = dayjs(liveStartTime.value).startOf("hour").format("YYYYMMDDHHmmss");
+  const endTime = dayjs(liveEndTime.value).startOf("hour").format("YYYYMMDDHHmmss");
   const queryType: TownWeatherQueryType =
     liveForm.queryMode === "hourly" ? "HOUR" : "RANGE";
   const elements = buildElementsParam();
@@ -773,7 +873,7 @@ async function handleForecastQuery() {
     ElMessage.warning("请先勾选预报查询");
     return;
   }
-  if (!forecastForm.startTime) {
+  if (!forecastStartTime.value) {
     ElMessage.warning("请选择起报时间");
     return;
   }
@@ -785,7 +885,9 @@ async function handleForecastQuery() {
 
   forecastLoading.value = true;
   const params = {
-    ptime: dayjs(forecastForm.startTime).format("YYYYMMDDHHmmss"),
+    ptime: dayjs(forecastStartTime.value)
+      .startOf("hour")
+      .format("YYYYMMDDHHmmss"),
     validTime: forecastForm.hourSelect === "hour24" ? "24" : "12",
     elements,
     ...(currentCountyCode.value ? { countyCode: currentCountyCode.value } : {}),
@@ -817,9 +919,12 @@ function handleDownload() {
 }
 
 function handleClear() {
-  liveForm.timeStart = "";
-  liveForm.timeEnd = "";
-  forecastForm.startTime = "";
+  liveForm.startDate = "";
+  liveForm.startHour = "00:00";
+  liveForm.endDate = "";
+  liveForm.endHour = "23:00";
+  forecastForm.startDate = "";
+  forecastForm.startHour = FORECAST_DEFAULT_HOUR;
   liveRows.value = [];
   forecastRows.value = [];
   queried.value = false;
@@ -946,7 +1051,18 @@ function handleClear() {
 }
 
 .date-control {
-  width: 12rem;
+  width: 9.6rem;
+}
+
+/* 日期 + 整点时次 组合控件 */
+.time-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hour-control {
+  width: 7.6rem;
 }
 
 .factor-group {
@@ -997,22 +1113,6 @@ function handleClear() {
   overflow: hidden;
 }
 
-/* 实况 / 预报 两张独立表并排 */
-.result-grid {
-  height: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(0.6rem, 1vw, 1rem);
-  min-height: 0;
-}
-
-.result-table-block {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
 /* el-table 深度覆盖：复用 assess 页面深蓝科技风 */
 .query-result-table {
   height: 100%;
@@ -1042,18 +1142,30 @@ function handleClear() {
     color: #fff;
     font-weight: 600;
     letter-spacing: 0.03em;
-    border-color: rgba(42, 156, 238, 0.28);
-    border-right: 2px solid rgba(42, 156, 238, 0.22) !important;
-    border-bottom: 2px solid rgba(42, 156, 238, 0.35);
+    border-color: rgba(120, 190, 255, 0.28);
+    border-right: 1px solid rgba(120, 190, 255, 0.28) !important;
+    border-bottom: 1px solid rgba(120, 190, 255, 0.32);
+  }
+
+  // 多级表头：第 1 行是「实况数据 / 预报数据」分组，第 2、3 行是时间范围与字段名
+  :deep(.el-table__header-wrapper thead tr:nth-child(1) th.el-table__cell) {
+    background: rgba(9, 55, 105, 0.96);
+    color: #eaf6ff;
+    font-weight: 700;
+  }
+
+  :deep(.el-table__header-wrapper thead tr:nth-child(n + 2) th.el-table__cell) {
+    background: rgba(17, 71, 132, 0.82);
+    color: #dfefff;
   }
 
   // 表体单元格
   :deep(.el-table__body-wrapper td.el-table__cell) {
     background: #031d42 !important;
     color: #cfe6f5;
-    border-color: rgba(42, 156, 238, 0.22);
-    border-right: 2px solid rgba(42, 156, 238, 0.22) !important;
-    border-bottom: 2px solid rgba(42, 156, 238, 0.35);
+    border-color: rgba(120, 190, 255, 0.22);
+    border-right: 1px solid rgba(120, 190, 255, 0.22) !important;
+    border-bottom: 1px solid rgba(120, 190, 255, 0.28);
   }
 
   // 合并后的区县/街道单元格可能跨越上百行，默认垂直居中会让文字跑到可视区外；

@@ -265,6 +265,11 @@ export const useMapStore = defineStore('map', () => {
     () => isConvectionGridFactor.value && currentOptionIndex.value === 1,
   )
 
+  /** 强对流「风险」栏：底部提供 0-2h（实况）/ 0-24h（预报）两个标签 */
+  const isConvectionRiskFactor = computed(
+    () => scene.value === 'convection' && currentFactor.value.name === '风险',
+  )
+
   /** 强对流里的要素/概率/确定性预报选项：底部标签显示“预报”，时间轴从第一档开始 */
   const isConvectionForecastOption = computed(
     () => isConvectionImageProduct.value || isConvectionGridForecast.value,
@@ -489,8 +494,12 @@ export const useMapStore = defineStore('map', () => {
     colorConfigRequestSerial++
     currentFactorType.value = factor.type
     if (isConvectionMode.value) {
-      // 要素预报复用预报网格，其余选项为实况；产品模式随选项切换
-      productMode.value = factor.type !== 'convection' && optionIndex === 1 ? 'forecast' : 'live'
+      // 风险栏由底部 0-2h / 0-24h 标签决定模式；要素预报复用预报网格，其余为实况
+      if (factorIndex === 0) {
+        if (currentFactor.value.name !== '风险') productMode.value = 'live'
+      } else {
+        productMode.value = factor.type !== 'convection' && optionIndex === 1 ? 'forecast' : 'live'
+      }
     }
     currentSelection.value = nextSelection
     mapRenderData.value.colorConfig = null
@@ -513,8 +522,11 @@ export const useMapStore = defineStore('map', () => {
     mapDataRequestSerial++
     colorConfigRequestSerial++
     productMode.value = mode
-    currentFactorType.value = factors.value[0]?.type || 'temperature'
-    currentSelection.value = '0-0'
+    // 强对流专题的实况/预报只切换风险帧，要素与选项保持不变
+    if (!isConvectionMode.value) {
+      currentFactorType.value = factors.value[0]?.type || 'temperature'
+      currentSelection.value = '0-0'
+    }
     setTimelineLabels([])
     mapRenderData.value.gridData = null
     mapRenderData.value.convectionData = null
@@ -1061,6 +1073,7 @@ export const useMapStore = defineStore('map', () => {
     isForecastMode,
     isConvectionGridForecast,
     isConvectionForecastOption,
+    isConvectionRiskFactor,
     isConvectionMode,
     isConvectionRiskView,
     isConvectionLightningLive,
@@ -1266,6 +1279,9 @@ function buildConvectionLiveFrames(rows: ShortTermWarningTown[], endTime: Dayjs)
 function buildConvectionForecastFrames(rows: ShortTermWarningTown[], endTime: Dayjs): ConvectionRenderData | null {
   const frames: Record<string, Record<string, ConvectionRiskLevel>> = {}
   const frameTimeMap = new Map<string, Dayjs>()
+  // 只取当前整点之后的未来 24 小时（逐小时），不含“当前实况”那一档
+  const futureStart = endTime.startOf('hour')
+  const futureEnd = futureStart.add(24, 'hour')
 
   rows.forEach((row) => {
     const townKeys = getWarningTownKeys(row)
@@ -1274,7 +1290,7 @@ function buildConvectionForecastFrames(rows: ShortTermWarningTown[], endTime: Da
 
     hours.forEach((hour) => {
       const time = parseConvectionHourTime(hour.time, endTime)
-      if (!time) return
+      if (!time || !time.isAfter(futureStart) || time.isAfter(futureEnd)) return
 
       const filePath = `convection_${time.format('YYYYMMDDHH0000')}`
       const frame = frames[filePath] ?? (frames[filePath] = {})

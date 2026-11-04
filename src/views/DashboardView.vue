@@ -30,7 +30,7 @@ import MapStage from '../components/center/MapStage.vue'
 import RightSidebar from '../components/right/RightSidebar.vue'
 import PdfPreviewDialog from '../components/common/PdfPreviewDialog.vue'
 import rawMock from '../mock/dashboard.json'
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { getTimeList, hzSmailDay, getDqByHz, dayForecast, getShortTermWarning, getTyphoonReportList } from '@/api/weather'
 import type { DashboardMock, MaterialFile } from '../types/dashboard'
 import { ElMessage } from 'element-plus'
@@ -96,7 +96,7 @@ const fetchData = async () => {
     // 未接入接口的产品（大风/雷达/雷电/冰雹 等）先给占位提示
     if (store.timelineParams.ele === '') {
       store.setConvectionWarningData(null)
-      ElMessage.warning('该产品开发中')
+      ElMessage.warning(store.currentFactor.name === '雷达' ? '暂无数据' : '该产品开发中')
       initData.value.timeline = []
       initData.value.mapTitle = store.maptitle
       return
@@ -306,9 +306,10 @@ const initAppData = async () => {
   }
 }
 
-// URL 是场景的唯一来源：刷新、前进后退、直达链接都能落到正确场景
-watch(() => route.query.scene, (scene) => {
-  const next = scene === 'convection' ? 'convection' : 'home'
+// 场景由路由决定：/ 为常规要素，/convection 为强对流专题。
+// 两个路由复用同一个组件，切换时实例不会重建，这里负责把路由同步到 store。
+const currentScene = computed(() => (route.meta.scene === 'convection' ? 'convection' : 'home'))
+watch(currentScene, (next) => {
   if (store.scene !== next) store.setScene(next)
 }, { immediate: true })
 

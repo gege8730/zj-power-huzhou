@@ -33,6 +33,7 @@ declare module 'vue' {
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTableV2: typeof import('element-plus/es')['ElTableV2']
+    ElTimeSelect: typeof import('element-plus/es')['ElTimeSelect']
     ImportantMaterialsPanel: typeof import('./src/components/right/ImportantMaterialsPanel.vue')['default']
     LayerToolbar: typeof import('./src/components/center/LayerToolbar.vue')['default']
     LeftSidebar: typeof import('./src/components/left/LeftSidebar.vue')['default']
